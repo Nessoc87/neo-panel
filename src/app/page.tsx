@@ -1,69 +1,168 @@
-import Image from "next/image";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import {
+  SESSION_COOKIE_NAME,
+  verifySessionToken,
+} from "@/lib/auth";
 
-export default function Home() {
+export const instant = false;
+
+const modulos = [
+  {
+    icono: "CO",
+    titulo: "Cotizaciones",
+    descripcion:
+      "Consulta solicitudes y prepara propuestas para tus clientes.",
+  },
+  {
+    icono: "SE",
+    titulo: "Seguimiento de envios",
+    descripcion:
+      "Organiza y consulta el estado de los servicios.",
+  },
+  {
+    icono: "WA",
+    titulo: "Conversaciones",
+    descripcion:
+      "Supervisa WhatsApp y la atencion de tus clientes.",
+  },
+  {
+    icono: "CL",
+    titulo: "Clientes",
+    descripcion:
+      "Consulta los datos y el historial de tus clientes.",
+  },
+];
+
+export default async function Home() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!verifySessionToken(token)) {
+    redirect("/login");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-slate-100 text-slate-800">
+      <header className="flex items-center justify-between gap-4 bg-slate-900 px-6 py-5 text-white">
+        <div>
+          <p className="text-xl font-bold">NEO</p>
+          <p className="text-sm text-slate-300">
+            TRANSPORTACIONES
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <form action="/api/auth/logout" method="POST">
+          <button
+            type="submit"
+            className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium transition hover:bg-white/10"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
+            Cerrar sesion
+          </button>
+        </form>
+      </header>
+
+      <div className="mx-auto max-w-7xl p-6 sm:p-10">
+        <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-8 text-white sm:p-12">
+          <p className="mb-3 text-sm font-bold tracking-widest text-cyan-300">
+            PANEL DE CONTROL
+          </p>
+
+          <h1 className="text-3xl font-bold sm:text-5xl">
+            Todo el trabajo de Neo,
+            <br />
+            en un solo lugar.
+          </h1>
+
+          <p className="mt-5 max-w-xl leading-7 text-slate-200">
+            Administra cotizaciones, supervisa conversaciones y
+            organiza la atencion de tus clientes desde una sola
+            plataforma.
+          </p>
+
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#modulos"
+            className="mt-7 inline-block rounded-xl bg-cyan-300 px-6 py-3 font-bold text-slate-900 hover:bg-cyan-200"
           >
-            Documentation
+            Explorar modulos
           </a>
-        </div>
-      </main>
-    </div>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="text-2xl font-bold">
+            Resumen operativo
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Los indicadores se activaran al conectar los datos reales.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              "Cotizaciones",
+              "Envios activos",
+              "Conversaciones",
+              "Alertas",
+            ].map((titulo) => (
+              <div
+                key={titulo}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
+                <p className="font-medium">{titulo}</p>
+
+                <p className="mt-4 text-3xl font-bold text-slate-300">
+                  —
+                </p>
+
+                <p className="mt-2 text-xs text-amber-700">
+                  Pendiente de conexion
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="modulos" className="mt-10">
+          <h2 className="text-2xl font-bold">
+            Modulos de Neo
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Herramientas para administrar la operacion de tu empresa.
+          </p>
+
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            {modulos.map((modulo) => (
+              <article
+                key={modulo.icono}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 font-bold text-cyan-900">
+                    {modulo.icono}
+                  </div>
+
+                  <h3 className="text-lg font-bold">
+                    {modulo.titulo}
+                  </h3>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-slate-600">
+                  {modulo.descripcion}
+                </p>
+
+                <p className="mt-5 border-t border-slate-100 pt-4 text-xs text-amber-700">
+                  En preparacion
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <footer className="py-8 text-center text-xs text-slate-400">
+          Neo Transportaciones · Panel privado
+        </footer>
+      </div>
+    </main>
   );
 }
