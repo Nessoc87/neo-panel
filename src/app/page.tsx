@@ -1,3 +1,4 @@
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -7,7 +8,14 @@ import {
 
 export const instant = false;
 
-const modulos = [
+type Modulo = {
+  icono: string;
+  titulo: string;
+  descripcion: string;
+  href?: string;
+};
+
+const modulos: Modulo[] = [
   {
     icono: "CO",
     titulo: "Cotizaciones",
@@ -16,7 +24,7 @@ const modulos = [
   },
   {
     icono: "SE",
-    titulo: "Seguimiento de envios",
+    titulo: "Seguimiento de envíos",
     descripcion:
       "Organiza y consulta el estado de los servicios.",
   },
@@ -24,13 +32,21 @@ const modulos = [
     icono: "WA",
     titulo: "Conversaciones",
     descripcion:
-      "Supervisa WhatsApp y la atencion de tus clientes.",
+      "Supervisa WhatsApp y la atención de tus clientes.",
+    href: "/conversaciones",
   },
   {
     icono: "CL",
     titulo: "Clientes",
     descripcion:
       "Consulta los datos y el historial de tus clientes.",
+  },
+  {
+    icono: "SV",
+    titulo: "Servicios",
+    descripcion:
+      "Registra, consulta, edita y exporta los servicios de Neo.",
+    href: "/servicios",
   },
 ];
 
@@ -57,7 +73,7 @@ export default async function Home() {
             type="submit"
             className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium transition hover:bg-white/10"
           >
-            Cerrar sesion
+            Cerrar sesión
           </button>
         </form>
       </header>
@@ -76,7 +92,7 @@ export default async function Home() {
 
           <p className="mt-5 max-w-xl leading-7 text-slate-200">
             Administra cotizaciones, supervisa conversaciones y
-            organiza la atencion de tus clientes desde una sola
+            organiza la atención de tus clientes desde una sola
             plataforma.
           </p>
 
@@ -84,7 +100,7 @@ export default async function Home() {
             href="#modulos"
             className="mt-7 inline-block rounded-xl bg-cyan-300 px-6 py-3 font-bold text-slate-900 hover:bg-cyan-200"
           >
-            Explorar modulos
+            Explorar módulos
           </a>
         </section>
 
@@ -94,13 +110,13 @@ export default async function Home() {
           </h2>
 
           <p className="mt-2 text-sm text-slate-500">
-            Los indicadores se activaran al conectar los datos reales.
+            Los indicadores se activarán al conectar los datos reales.
           </p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               "Cotizaciones",
-              "Envios activos",
+              "Envíos activos",
               "Conversaciones",
               "Alertas",
             ].map((titulo) => (
@@ -115,7 +131,7 @@ export default async function Home() {
                 </p>
 
                 <p className="mt-2 text-xs text-amber-700">
-                  Pendiente de conexion
+                  Pendiente de conexión
                 </p>
               </div>
             ))}
@@ -124,11 +140,11 @@ export default async function Home() {
 
         <section id="modulos" className="mt-10">
           <h2 className="text-2xl font-bold">
-            Modulos de Neo
+            Módulos de Neo
           </h2>
 
           <p className="mt-2 text-sm text-slate-500">
-            Herramientas para administrar la operacion de tu empresa.
+            Herramientas para administrar la operación de tu empresa.
           </p>
 
           <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -151,9 +167,18 @@ export default async function Home() {
                   {modulo.descripcion}
                 </p>
 
-                <p className="mt-5 border-t border-slate-100 pt-4 text-xs text-amber-700">
-                  En preparacion
-                </p>
+                {modulo.href ? (
+                  <a
+                    href={modulo.href}
+                    className="mt-5 inline-flex items-center gap-2 border-t border-slate-100 pt-4 text-sm font-bold text-cyan-800 hover:text-cyan-600"
+                  >
+                    Abrir módulo →
+                  </a>
+                ) : (
+                  <p className="mt-5 border-t border-slate-100 pt-4 text-xs text-amber-700">
+                    En preparación
+                  </p>
+                )}
               </article>
             ))}
           </div>
