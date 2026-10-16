@@ -1,4 +1,3 @@
-
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -19,33 +18,28 @@ const modulos: Modulo[] = [
   {
     icono: "CO",
     titulo: "Cotizaciones",
-    descripcion:
-      "Consulta solicitudes y prepara propuestas para tus clientes.",
+    descripcion: "Consulta solicitudes y prepara propuestas para tus clientes.",
   },
   {
     icono: "SE",
     titulo: "Seguimiento de envíos",
-    descripcion:
-      "Organiza y consulta el estado de los servicios.",
+    descripcion: "Organiza y consulta el estado de los servicios.",
   },
   {
     icono: "WA",
     titulo: "Conversaciones",
-    descripcion:
-      "Supervisa WhatsApp y la atención de tus clientes.",
+    descripcion: "Supervisa WhatsApp y la atención de tus clientes.",
     href: "/conversaciones",
   },
   {
     icono: "CL",
     titulo: "Clientes",
-    descripcion:
-      "Consulta los datos y el historial de tus clientes.",
+    descripcion: "Consulta los datos y el historial de tus clientes.",
   },
   {
     icono: "SV",
     titulo: "Servicios",
-    descripcion:
-      "Registra, consulta, edita y exporta los servicios de Neo.",
+    descripcion: "Registra, consulta, edita y exporta los servicios de Neo.",
     href: "/servicios",
   },
 ];
@@ -63,11 +57,8 @@ export default async function Home() {
       <header className="flex items-center justify-between gap-4 bg-slate-900 px-6 py-5 text-white">
         <div>
           <p className="text-xl font-bold">NEO</p>
-          <p className="text-sm text-slate-300">
-            TRANSPORTACIONES
-          </p>
+          <p className="text-sm text-slate-300">TRANSPORTACIONES</p>
         </div>
-
         <form action="/api/auth/logout" method="POST">
           <button
             type="submit"
@@ -83,19 +74,14 @@ export default async function Home() {
           <p className="mb-3 text-sm font-bold tracking-widest text-cyan-300">
             PANEL DE CONTROL
           </p>
-
           <h1 className="text-3xl font-bold sm:text-5xl">
             Todo el trabajo de Neo,
             <br />
             en un solo lugar.
           </h1>
-
           <p className="mt-5 max-w-xl leading-7 text-slate-200">
-            Administra cotizaciones, supervisa conversaciones y
-            organiza la atención de tus clientes desde una sola
-            plataforma.
+            Administra cotizaciones, supervisa conversaciones y organiza la atención de tus clientes desde una sola plataforma.
           </p>
-
           <a
             href="#modulos"
             className="mt-7 inline-block rounded-xl bg-cyan-300 px-6 py-3 font-bold text-slate-900 hover:bg-cyan-200"
@@ -105,48 +91,29 @@ export default async function Home() {
         </section>
 
         <section className="mt-10">
-          <h2 className="text-2xl font-bold">
-            Resumen operativo
-          </h2>
-
+          <h2 className="text-2xl font-bold">Resumen operativo</h2>
           <p className="mt-2 text-sm text-slate-500">
             Los indicadores se activarán al conectar los datos reales.
           </p>
-
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              "Cotizaciones",
-              "Envíos activos",
-              "Conversaciones",
-              "Alertas",
-            ].map((titulo) => (
+            {["Cotizaciones", "Envíos activos", "Conversaciones", "Alertas"].map((titulo) => (
               <div
                 key={titulo}
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
               >
                 <p className="font-medium">{titulo}</p>
-
-                <p className="mt-4 text-3xl font-bold text-slate-300">
-                  —
-                </p>
-
-                <p className="mt-2 text-xs text-amber-700">
-                  Pendiente de conexión
-                </p>
+                <p className="mt-4 text-3xl font-bold text-slate-300">—</p>
+                <p className="mt-2 text-xs text-amber-700">Pendiente de conexión</p>
               </div>
             ))}
           </div>
         </section>
 
         <section id="modulos" className="mt-10">
-          <h2 className="text-2xl font-bold">
-            Módulos de Neo
-          </h2>
-
+          <h2 className="text-2xl font-bold">Módulos de Neo</h2>
           <p className="mt-2 text-sm text-slate-500">
             Herramientas para administrar la operación de tu empresa.
           </p>
-
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             {modulos.map((modulo) => (
               <article
@@ -157,16 +124,11 @@ export default async function Home() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 font-bold text-cyan-900">
                     {modulo.icono}
                   </div>
-
-                  <h3 className="text-lg font-bold">
-                    {modulo.titulo}
-                  </h3>
+                  <h3 className="text-lg font-bold">{modulo.titulo}</h3>
                 </div>
-
                 <p className="mt-4 text-sm leading-6 text-slate-600">
                   {modulo.descripcion}
                 </p>
-
                 {modulo.href ? (
                   <a
                     href={modulo.href}
