@@ -509,7 +509,7 @@ export default function ServiciosPage() {
               <label className={claseEtiqueta}>Concepto principal *
                 <select className={claseCampo} value={form.concepto_base} onChange={(e) => seleccionarConcepto(e.target.value)} required disabled={cargandoCatalogos || conceptos.length === 0}>
                   <option value="">{cargandoCatalogos ? "Cargando conceptos..." : "Selecciona un concepto"}</option>
-                  {conceptos.map((concepto) => <option key={concepto.id} value={concepto.nombre}>{concepto.nombre}{concepto.precio_manual ? " · precio manual" : ` · ${dinero(concepto.precio_unitario)}`}</option>)}
+                  {conceptos.map((concepto) => <option key={concepto.id} value={concepto.nombre}>{concepto.nombre}</option>)}
                   <option value={CONCEPTO_MANUAL}>Otro concepto (manual)</option>
                 </select>
               </label>
