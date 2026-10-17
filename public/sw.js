@@ -1,14 +1,17 @@
 /*
  * Neo Panel service worker.
- * Only cache static app icons and the offline information page.
+ * Only cache static brand assets and the offline information page.
  * Never cache authenticated pages, API responses, or customer data.
  */
-const CACHE_NAME = "neo-panel-static-v1";
+const CACHE_NAME = "neo-panel-static-v2";
 const OFFLINE_URL = "/offline.html";
 const STATIC_ASSETS = [
   OFFLINE_URL,
+  "/neo-logo.png",
+  "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
+  "/icon-512-maskable.png",
   "/apple-touch-icon.png",
 ];
 

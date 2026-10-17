@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -54,23 +55,31 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
-      <header className="flex items-center justify-between gap-4 bg-slate-900 px-6 py-5 text-white">
-        <div>
-          <p className="text-xl font-bold">NEO</p>
-          <p className="text-sm text-slate-300">TRANSPORTACIONES</p>
+      <header className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <a href="/" aria-label="Neo Transportaciones, inicio" className="inline-flex items-center">
+            <Image
+              src="/neo-logo.png"
+              alt="NEO Transportaciones"
+              width={220}
+              height={114}
+              priority
+              className="h-14 w-auto object-contain sm:h-16"
+            />
+          </a>
+          <form action="/api/auth/logout" method="POST">
+            <button
+              type="submit"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Cerrar sesión
+            </button>
+          </form>
         </div>
-        <form action="/api/auth/logout" method="POST">
-          <button
-            type="submit"
-            className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium transition hover:bg-white/10"
-          >
-            Cerrar sesión
-          </button>
-        </form>
       </header>
 
-      <div className="mx-auto max-w-7xl p-6 sm:p-10">
-        <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-8 text-white sm:p-12">
+      <div className="mx-auto max-w-7xl p-4 sm:p-8 lg:p-10">
+        <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-6 text-white sm:p-12">
           <p className="mb-3 text-sm font-bold tracking-widest text-cyan-300">
             PANEL DE CONTROL
           </p>

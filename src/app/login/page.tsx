@@ -1,8 +1,9 @@
+
 "use client";
 
+import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { connection } from "next/server";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,16 +53,24 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-5">
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4 sm:p-6">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl md:grid-cols-2">
-        <section className="flex flex-col justify-between bg-gradient-to-br from-slate-900 to-cyan-800 p-8 text-white sm:p-12">
+        <section className="flex flex-col justify-between bg-gradient-to-br from-slate-900 to-cyan-800 p-7 text-white sm:p-10 md:p-12">
           <div>
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-300 text-2xl font-black text-slate-900">
-              N
+            <div className="mb-8 flex min-h-[150px] w-full max-w-sm items-center justify-center rounded-2xl bg-white p-3 shadow-md sm:min-h-[180px]">
+              <Image
+                src="/neo-logo.png"
+                alt="Logo de Neo Transportaciones"
+                width={960}
+                height={640}
+                priority
+                sizes="(max-width: 768px) 80vw, 280px"
+                className="h-auto max-h-44 w-full max-w-[280px] object-contain"
+              />
             </div>
 
-            <p className="mt-6 text-sm font-bold tracking-[0.2em] text-cyan-300">
-              NEO TRANSPORTACIONES
+            <p className="text-sm font-bold tracking-[0.2em] text-cyan-300">
+              SOLUCIONES LOGÍSTICAS
             </p>
 
             <h1 className="mt-6 text-3xl font-bold leading-tight sm:text-4xl">

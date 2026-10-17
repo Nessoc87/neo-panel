@@ -2,7 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE_NAME = "neo_session";
 
-export const SESSION_DURATION_SECONDS = 60 * 60 * 8;
+// La sesión permanece válida durante 30 días, incluso al cerrar la app.
+export const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
 type SessionPayload = {
   username: string;
