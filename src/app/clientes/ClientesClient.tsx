@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -39,7 +40,7 @@ export default function ClientesClient() {
     } catch(e) { setError(e instanceof Error ? e.message : "Error al cargar clientes."); }
     finally { setCargando(false); }
   },[]);
-  useEffect(()=>{void cargar();},[cargar]);
+  useEffect(()=>{void Promise.resolve().then(cargar);},[cargar]);
 
   const filtrados = useMemo(()=>{
     const q=busqueda.trim().toLocaleLowerCase("es-MX");
@@ -88,7 +89,7 @@ export default function ClientesClient() {
   return <main className="min-h-screen bg-slate-100 text-slate-800">
     <header className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 px-5 py-5 text-white sm:px-8">
       <div><p className="text-xl font-bold">NEO</p><p className="text-xs tracking-wider text-slate-300">TRANSPORTACIONES</p></div>
-      <div className="flex flex-wrap gap-2"><a href="/" className="rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10">Volver al panel</a><a href="/servicios" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-cyan-200">Servicios</a></div>
+      <div className="flex flex-wrap gap-2"><Link href="/" className="rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10">Volver al panel</Link><a href="/servicios" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-cyan-200">Servicios</a></div>
     </header>
     <div className="mx-auto max-w-7xl p-4 sm:p-8">
       <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-6 text-white sm:p-9"><p className="text-xs font-bold tracking-[0.2em] text-cyan-300">DIRECTORIO</p><h1 className="mt-3 text-3xl font-bold sm:text-4xl">Clientes</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">Administra datos de contacto y facturación de tus clientes.</p></section>
