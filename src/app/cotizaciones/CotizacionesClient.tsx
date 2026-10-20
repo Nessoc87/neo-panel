@@ -9,7 +9,7 @@ type Cotizacion = {
   tipo_unidad:string|null; tipo_flete:string|null; fecha_servicio:string|null;
   monto_estimado:number|string|null; estado:string; notas:string|null; created_at:string;
 };
-type Cliente = {id:string;nombre:string;telefono?:string|null};
+type Cliente = {id:string;nombre:string;telefono?:string|null;activo?:boolean};
 type Form = {cliente_id:string;cliente:string;telefono:string;servicio:string;origen:string;destino:string;mercancia:string;peso:string;tipo_unidad:string;tipo_flete:string;fecha_servicio:string;monto_estimado:string;estado:string;notas:string};
 const vacio:Form={cliente_id:"",cliente:"",telefono:"",servicio:"Flete",origen:"",destino:"",mercancia:"",peso:"",tipo_unidad:"",tipo_flete:"",fecha_servicio:"",monto_estimado:"",estado:"PENDIENTE",notas:""};
 const estados=[["PENDIENTE","Pendiente"],["EN_REVISION","En revisión"],["COTIZADA","Cotizada"],["ACEPTADA","Aceptada"],["RECHAZADA","Rechazada"],["CANCELADA","Cancelada"]];
