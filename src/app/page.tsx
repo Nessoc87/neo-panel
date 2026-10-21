@@ -30,7 +30,7 @@ export default async function Home() {
       supabaseAdmin.from("neo_cotizaciones").select("id", { count: "exact", head: true }),
       supabaseAdmin.from("neo_clientes").select("id", { count: "exact", head: true }).eq("activo", true),
       supabaseAdmin.from("servicios").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("servicios").select("id", { count: "exact", head: true }).in("estatus", ["PENDIENTE", "FACTURADO", "PAGADO"]).limit(1000),
+      supabaseAdmin.from("servicios").select("id").in("estatus", ["PENDIENTE", "FACTURADO", "PAGADO"]).limit(1000),
     ]);
     if (!quotesResult.error && quotesResult.count !== null) cotizaciones = quotesResult.count;
     if (!clientsResult.error && clientsResult.count !== null) clientes = clientsResult.count;
