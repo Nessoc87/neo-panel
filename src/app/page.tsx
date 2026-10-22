@@ -110,11 +110,17 @@ export default async function Home() {
             {modulos.map((modulo) => (
               <article key={modulo.icono} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 font-bold text-cyan-900">{modulo.icono}</div>
+                  <a
+                    href={modulo.href}
+                    aria-label={`Abrir módulo ${modulo.titulo}`}
+                    title={`Abrir ${modulo.titulo}`}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-100 font-bold text-cyan-900 transition hover:bg-cyan-200 hover:text-cyan-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                  >
+                    {modulo.icono}
+                  </a>
                   <h3 className="text-lg font-bold">{modulo.titulo}</h3>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-600">{modulo.descripcion}</p>
-                <a href={modulo.href} className="mt-5 inline-flex items-center gap-2 border-t border-slate-100 pt-4 text-sm font-bold text-cyan-800 hover:text-cyan-600">Abrir módulo →</a>
               </article>
             ))}
           </div>
