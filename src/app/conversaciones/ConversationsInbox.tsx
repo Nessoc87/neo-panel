@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "BOT" | "HUMANO";
 
@@ -94,6 +94,9 @@ export default function ConversationsInbox() {
 
   // Solo una conversación estará desplegada a la vez.
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // De inicio mostramos solo los mensajes recientes; el historial anterior se despliega a petición.
+  const [showHistory, setShowHistory] = useState<Record<string, boolean>>({});
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [modeByPhone, setModeByPhone] = useState<Record<string, Mode>>({});
   const [modeMessage, setModeMessage] = useState<Record<string, string>>({});
@@ -140,6 +143,14 @@ export default function ConversationsInbox() {
   useEffect(() => {
     void loadConversations();
   }, [loadConversations]);
+
+  // Al abrir una conversación o actualizar mensajes, mostrar primero los mensajes más recientes.
+  useEffect(() => {
+    const contenedor = messagesContainerRef.current;
+    if (expandedKey && contenedor) {
+      contenedor.scrollTop = contenedor.scrollHeight;
+    }
+  }, [expandedKey, conversations]);
 
   const threads = useMemo(() => {
     const groups = new Map<string, Conversation[]>();
@@ -197,7 +208,7 @@ export default function ConversationsInbox() {
     }
 
     return result.sort(
-      (a, b) => dateValue(b.ultimo.FechaHora) - dateValue(a.ultimo.FechaHora)
+      (a, b) => dateValue(a.ultimo.FechaHora) - dateValue(b.ultimo.FechaHora)
     );
   }, [conversations, search]);
 
@@ -502,6 +513,12 @@ export default function ConversationsInbox() {
                 const chronologicalMessages = [...thread.mensajes].sort(
                   (a, b) => dateValue(a.FechaHora) - dateValue(b.FechaHora)
                 );
+                const recentLimit = 10;
+                const olderCount = Math.max(0, chronologicalMessages.length - recentLimit);
+                const historyIsVisible = showHistory[thread.key] === true;
+                const visibleMessages = historyIsVisible
+                  ? chronologicalMessages
+                  : chronologicalMessages.slice(-recentLimit);
 
                 return (
                   <article
@@ -579,9 +596,25 @@ export default function ConversationsInbox() {
                           </div>
                         </div>
 
-                        {/* Historial completo */}
-                        <div className="max-h-[520px] space-y-3 overflow-y-auto bg-slate-50 p-4 sm:p-5">
-                          {chronologicalMessages.map((message, index) => {
+                        {/* El historial anterior permanece plegado hasta que el usuario lo solicite. */}
+                        {olderCount > 0 && (
+                          <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
+                            <button
+                              type="button"
+                              onClick={() => setShowHistory((previous) => ({ ...previous, [thread.key]: !historyIsVisible }))}
+                              aria-expanded={historyIsVisible}
+                              className="rounded-lg border border-cyan-200 px-3 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700"
+                            >
+                              {historyIsVisible
+                                ? "Ocultar historial anterior"
+                                : `Ver historial anterior (${olderCount} mensajes)`}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Mensajes recientes: los más nuevos quedan abajo y se muestran al abrir. */}
+                        <div ref={messagesContainerRef} className="max-h-[520px] space-y-3 overflow-y-auto bg-slate-50 p-4 sm:p-5">
+                          {visibleMessages.map((message, index) => {
                             const incoming = isIncoming(message);
 
                             return (
