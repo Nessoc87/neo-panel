@@ -82,7 +82,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("servicios")
       .select("*")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: true })
       .limit(1000);
 
     if (error) {
