@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PwaRegister from "./PwaRegister";
+import NeoWorkspace from "./NeoWorkspace";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <PwaRegister />
-        {children}
+        <NeoWorkspace>{children}</NeoWorkspace>
       </body>
     </html>
   );
