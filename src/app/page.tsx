@@ -158,10 +158,10 @@ export default async function Home() {
           <div className="neo-module-grid">
             {modulos.map((modulo, index) => (
               <article className="neo-module-card" key={modulo.href}>
-                <div className="neo-module-card-top"><span className={`neo-module-initials neo-module-initials-${index + 1}`}>{modulo.icono}</span><span className="neo-module-area">{modulo.area}</span></div>
+                <div className="neo-module-card-top"><Link href={modulo.href} aria-label={`Entrar al módulo ${modulo.titulo}`} title={`Entrar al módulo ${modulo.titulo}`} className={`neo-module-initials neo-module-initials-link neo-module-initials-${index + 1}`}>{modulo.icono}</Link><span className="neo-module-area">{modulo.area}</span></div>
                 <h3>{modulo.titulo}</h3>
                 <p>{modulo.descripcion}</p>
-                <div className="neo-module-card-bottom"><Link href={modulo.href} aria-label={`Abrir módulo ${modulo.titulo}`} title={`Abrir ${modulo.titulo}`} className="neo-module-open"><span>Abrir módulo</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></Link><span className="neo-module-index">0{index + 1}</span></div>
+                <div className="neo-module-card-bottom"><span className="neo-module-index">0{index + 1}</span></div>
               </article>
             ))}
           </div>

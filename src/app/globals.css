@@ -216,21 +216,24 @@ button:disabled {
   box-shadow: 0 16px 34px rgba(16, 36, 60, 0.085);
 }
 
-.neo-app #modulos article a {
-  height: 54px;
-  width: 54px;
-  border-radius: 15px;
-  color: #0e6274;
-  background: linear-gradient(145deg, #e2f6f7, #c8edf0) !important;
-  box-shadow: inset 0 0 0 1px rgba(15, 116, 133, 0.05);
-  font-size: 0.95rem;
-  letter-spacing: -0.025em;
+.neo-app #modulos article .neo-module-initials-link {
+  height: 46px;
+  width: 46px;
+  flex: 0 0 46px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
 }
 
-.neo-app #modulos article a:hover {
-  color: #ffffff !important;
-  background: #0f7485 !important;
-  box-shadow: 0 7px 16px rgba(15, 116, 133, 0.18);
+.neo-app #modulos article .neo-module-initials-link:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+  box-shadow: 0 7px 16px rgba(15, 116, 133, .12);
+}
+
+.neo-app #modulos article .neo-module-initials-link:focus-visible {
+  outline: 3px solid rgba(15, 116, 133, .3);
+  outline-offset: 4px;
 }
 
 .neo-app #modulos article h3 {
