@@ -82,7 +82,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("servicios")
       .select("*")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(1000);
 
     if (error) {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
   }
 
   const cliente = textValue(body.cliente, 200);
-  const factura = textValue(body.factura, 100) || null;
+  const factura = null; // El consecutivo se asigna con un trigger en PostgreSQL.
   const concepto = textValue(body.concepto, 1000);
   const cantidad = numericValue(body.cantidad, 1);
   const costoUnitario = numericValue(body.costo_unitario, 0);
@@ -304,7 +304,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const cliente = textValue(body.cliente, 200);
-  const factura = textValue(body.factura, 100) || null;
+
   const concepto = textValue(body.concepto, 1000);
 
   const cantidad = numericValue(body.cantidad, 1);
@@ -371,7 +371,6 @@ export async function PATCH(request: NextRequest) {
 
   const record = {
     cliente,
-    factura,
     cantidad,
     concepto,
     costo_unitario: costoUnitario,
