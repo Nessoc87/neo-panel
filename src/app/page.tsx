@@ -161,7 +161,7 @@ export default async function Home() {
                 <div className="neo-module-card-top"><Link href={modulo.href} aria-label={`Entrar al módulo ${modulo.titulo}`} title={`Entrar al módulo ${modulo.titulo}`} className={`neo-module-initials neo-module-initials-link neo-module-initials-${index + 1}`}>{modulo.icono}</Link><span className="neo-module-area">{modulo.area}</span></div>
                 <h3>{modulo.titulo}</h3>
                 <p>{modulo.descripcion}</p>
-                <div className="neo-module-card-bottom"><span className="neo-module-index">0{index + 1}</span></div>
+                
               </article>
             ))}
           </div>

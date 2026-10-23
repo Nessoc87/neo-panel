@@ -401,76 +401,56 @@ export default function ConversationsInbox() {
       </header>
 
       <div className="mx-auto max-w-7xl p-5 sm:p-8">
-        <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-7 text-white sm:p-9">
-          <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">
-            ATENCIÓN AL CLIENTE
-          </p>
-
-          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
-            Bandeja de conversaciones
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">
-            Selecciona un cliente para consultar el historial y responder
-            por WhatsApp.
-          </p>
-        </section>
-
-        <section className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { titulo: "Mensajes registrados", valor: conversations.length },
-            { titulo: "Mensajes entrantes", valor: incomingCount },
-            { titulo: "Mensajes salientes", valor: outgoingCount },
-            { titulo: "Alertas registradas", valor: anomalyCount },
-          ].map((stat) => (
-            <article
-              key={stat.titulo}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <p className="text-sm text-slate-500">{stat.titulo}</p>
-              <p className="mt-3 text-3xl font-bold">{stat.valor}</p>
-              <p className="mt-2 text-xs text-slate-400">
-                Datos recuperados de la bandeja
-              </p>
-            </article>
-          ))}
-        </section>
-
-        <section className="mt-8">
-          <label
-            htmlFor="conversationSearch"
-            className="mb-2 block text-sm font-semibold text-slate-700"
+        <section className="neo-inbox-heading">
+          <div className="neo-inbox-heading-copy">
+            <p className="neo-inbox-eyebrow">ATENCIÓN AL CLIENTE</p>
+            <h1>Bandeja de conversaciones</h1>
+            <p>Consulta los mensajes por cliente, revisa el historial y responde por WhatsApp desde un solo lugar.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadConversations()}
+            disabled={loading}
+            className="neo-inbox-refresh"
           >
-            Buscar clientes y mensajes
-          </label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.5-2L20 12M4 12l2.9 5a7 7 0 0 0 11.5-2"/></svg>
+            {loading ? "Actualizando..." : "Actualizar"}
+          </button>
+        </section>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              id="conversationSearch"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por nombre, teléfono o mensaje..."
-              className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"
-            />
+        <section className="neo-inbox-stat-tabs" aria-label="Resumen de conversaciones">
+          <div className="neo-inbox-stat-tab is-current"><span>Clientes</span><strong>{threads.length}</strong></div>
+          <div className="neo-inbox-stat-tab"><span>Mensajes registrados</span><strong>{conversations.length}</strong></div>
+          <div className="neo-inbox-stat-tab"><span>Entrantes</span><strong>{incomingCount}</strong></div>
+          <div className="neo-inbox-stat-tab"><span>Salientes</span><strong>{outgoingCount}</strong></div>
+          <div className="neo-inbox-stat-tab"><span>Alertas</span><strong>{anomalyCount}</strong></div>
+        </section>
 
-            <button
-              onClick={() => setSearch("")}
-              className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium hover:bg-slate-50"
-            >
-              Limpiar búsqueda
+        <section className="neo-inbox-toolbar">
+          <div className="neo-inbox-toolbar-title">
+            <p className="neo-inbox-eyebrow">REGISTRO DE ATENCIÓN</p>
+            <h2>Conversaciones</h2>
+            <p>{threads.length} clientes · selecciona una fila para ver el historial y las acciones.</p>
+          </div>
+          <div className="neo-inbox-search">
+            <label htmlFor="conversationSearch" className="sr-only">Buscar clientes y mensajes</label>
+            <div className="neo-inbox-search-field">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input
+                id="conversationSearch"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar nombre, teléfono o mensaje..."
+              />
+            </div>
+            <button type="button" onClick={() => setSearch("")} disabled={!search} className="neo-inbox-clear">
+              Limpiar
             </button>
           </div>
         </section>
 
-        <section className="mt-8">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold">Conversaciones</h2>
-            <span className="text-sm text-slate-500">
-              {threads.length} clientes
-            </span>
-          </div>
-
+        <section className="neo-inbox-results">
           {error && (
             <div
               role="alert"
@@ -503,7 +483,16 @@ export default function ConversationsInbox() {
           )}
 
           {!loading && !error && threads.length > 0 && (
-            <div className="space-y-2">
+            <div className="neo-conversation-table">
+              <div className="neo-conversation-table-header" aria-hidden="true">
+                <span>Cliente</span>
+                <span>Último mensaje</span>
+                <span>Dirección</span>
+                <span>Última actividad</span>
+                <span>Atención</span>
+                <span>Mensajes</span>
+              </div>
+              <div className="neo-conversation-table-body">
               {threads.map((thread) => {
                 const isExpanded = expandedKey === thread.key;
                 const currentMode = modeByPhone[thread.telefono];
@@ -523,48 +512,54 @@ export default function ConversationsInbox() {
                 return (
                   <article
                     key={thread.key}
-                    className="neo-thread overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="neo-thread"
                   >
-                    {/* Fila compacta: nombre y una sola línea del mensaje */}
+                    {/* Fila tabular compacta; la selección abre el detalle conservado. */}
                     <button
                       type="button"
-                      onClick={() =>
-                        setExpandedKey(isExpanded ? null : thread.key)
-                      }
+                      onClick={() => setExpandedKey(isExpanded ? null : thread.key)}
                       aria-expanded={isExpanded}
-                      className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-slate-50 sm:px-5"
+                      className="neo-conversation-summary-row"
                     >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-100 font-bold text-cyan-900">
-                        {thread.nombre.charAt(0).toUpperCase()}
-                      </div>
+                      <span className="neo-conversation-customer">
+                        <span className="neo-conversation-avatar">
+                          {thread.nombre.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="neo-conversation-customer-text">
+                          <strong>{thread.nombre}</strong>
+                          <small>{thread.telefono || "Teléfono no registrado"}</small>
+                        </span>
+                      </span>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-3">
-                          <h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">
-                            {thread.nombre}
-                          </h3>
+                      <span className="neo-conversation-last-message" title={getMessage(thread.ultimo)}>
+                        <span>{getMessage(thread.ultimo)}</span>
+                        <small>{thread.ultimo.MediaFileId || thread.ultimo.DriveFileId ? "Mensaje con archivo adjunto" : "Mensaje de WhatsApp"}</small>
+                      </span>
 
-                          <span className="shrink-0 text-xs text-slate-400">
-                            {formatShortTime(thread.ultimo.FechaHora)}
-                          </span>
-                        </div>
+                      <span className={`neo-conversation-direction ${isIncoming(thread.ultimo) ? "is-incoming" : "is-outgoing"}`}>
+                        {isIncoming(thread.ultimo) ? "Entrante" : "Saliente"}
+                      </span>
 
-                        <p className="mt-1 truncate text-sm text-slate-500">
-                          {getMessage(thread.ultimo)}
-                        </p>
-                      </div>
+                      <span className="neo-conversation-date">
+                        <strong>{formatShortTime(thread.ultimo.FechaHora) || "—"}</strong>
+                        <small>{formatDate(thread.ultimo.FechaHora).split(",")[0]}</small>
+                      </span>
 
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 text-lg text-slate-400"
-                      >
-                        {isExpanded ? "⌃" : "⌄"}
+                      <span className="neo-conversation-attention">
+                        <span className={`neo-mode-pill ${currentMode === "HUMANO" ? "is-human" : currentMode === "BOT" ? "is-bot" : "is-unknown"}`}>
+                          {currentMode || "Sin consultar"}
+                        </span>
+                      </span>
+
+                      <span className="neo-conversation-message-count">
+                        <strong>{thread.mensajes.length}</strong>
+                        <span aria-hidden="true">{isExpanded ? "⌃" : "⌄"}</span>
                       </span>
                     </button>
 
                     {/* Contenido desplegado al seleccionar al cliente */}
                     {isExpanded && (
-                      <div className="border-t border-slate-200">
+                      <div className="neo-conversation-detail">
                         <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-4 py-3 sm:px-5">
                           <div>
                             <p className="text-sm font-semibold text-slate-800">
@@ -779,6 +774,7 @@ export default function ConversationsInbox() {
                   </article>
                 );
               })}
+              </div>
             </div>
           )}
         </section>

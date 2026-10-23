@@ -1200,11 +1200,6 @@ button:disabled {
 .neo-module-card h3 { margin: 19px 0 0; color: #152d46; font-size: 1.02rem; line-height: 1.35; font-weight: 810; letter-spacing: -.025em; }
 .neo-module-card > p { margin: 8px 0 18px; color: #77879a; font-size: .76rem; line-height: 1.65; }
 
-.neo-module-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid #edf1f5; }
-.neo-module-open { display: inline-flex; align-items: center; gap: 8px; color: #0c7b89 !important; text-decoration: none !important; font-size: .72rem; font-weight: 800; }
-.neo-module-open svg { transition: transform .16s ease; }
-.neo-module-open:hover svg { transform: translateX(3px); }
-.neo-module-index { color: #bdc7d1; font-size: .61rem; font-weight: 800; letter-spacing: .1em; }
 
 .neo-dashboard-footer {
   display: flex;
@@ -1315,4 +1310,86 @@ button:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
+}
+
+
+/* Neo Conversations: compact enterprise register; action logic stays in the inbox component. */
+.neo-inbox-heading { display:flex; align-items:center; justify-content:space-between; gap:22px; padding:6px 0 22px; }
+.neo-inbox-heading-copy { min-width:0; }
+.neo-inbox-eyebrow { margin:0 0 7px; color:#0b8291; font-size:.63rem; font-weight:850; letter-spacing:.15em; }
+.neo-inbox-heading h1 { margin:0; color:#132b45; font-size:clamp(1.65rem,2.5vw,2.15rem); font-weight:820; letter-spacing:-.045em; line-height:1.2; }
+.neo-inbox-heading-copy > p:last-child { margin:8px 0 0; color:#718198; font-size:.82rem; line-height:1.6; }
+.neo-inbox-refresh { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; gap:9px; min-height:40px; padding:0 15px; color:#28425b; background:#fff; border:1px solid #dce5ef; border-radius:9px; box-shadow:0 2px 6px rgba(16,36,60,.025); font-size:.75rem; font-weight:720; transition:background .16s ease,border-color .16s ease; }
+.neo-inbox-refresh:hover { background:#f7fafc; border-color:#bdccda; }
+.neo-inbox-refresh:disabled { cursor:wait; opacity:.65; }
+.neo-inbox-stat-tabs { display:flex; align-items:stretch; gap:0; overflow-x:auto; padding:0 12px; background:#fff; border:1px solid #e0e7ef; border-radius:12px 12px 0 0; }
+.neo-inbox-stat-tab { display:flex; flex:0 0 auto; align-items:center; gap:9px; min-height:47px; padding:0 15px; color:#687a8f; border-bottom:2px solid transparent; font-size:.72rem; font-weight:650; white-space:nowrap; }
+.neo-inbox-stat-tab strong { display:inline-grid; min-width:22px; height:20px; place-items:center; padding:0 5px; color:#52667b; background:#eef2f6; border-radius:5px; font-size:.64rem; font-weight:800; font-variant-numeric:tabular-nums; }
+.neo-inbox-stat-tab.is-current { color:#17324d; border-bottom-color:#0c8392; }
+.neo-inbox-stat-tab.is-current strong { color:#087584; background:#e3f5f5; }
+.neo-inbox-toolbar { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:18px; padding:17px 19px; background:#fff; border:1px solid #e0e7ef; border-bottom:0; border-radius:12px 12px 0 0; }
+.neo-inbox-toolbar-title { min-width:190px; }
+.neo-inbox-toolbar-title .neo-inbox-eyebrow { margin-bottom:5px; font-size:.56rem; }
+.neo-inbox-toolbar-title h2 { margin:0; color:#142d47; font-size:1.16rem; font-weight:810; letter-spacing:-.035em; }
+.neo-inbox-toolbar-title > p:last-child { margin:5px 0 0; color:#7a8a9c; font-size:.7rem; line-height:1.5; }
+.neo-inbox-search { display:flex; min-width:min(100%,440px); align-items:center; gap:9px; }
+.neo-inbox-search-field { display:flex; min-width:0; min-height:40px; flex:1; align-items:center; gap:9px; padding:0 12px; color:#8392a3; background:#fff; border:1px solid #dce5ee; border-radius:8px; }
+.neo-inbox-search-field:focus-within { border-color:#65b9c2; box-shadow:0 0 0 3px rgba(15,116,133,.08); }
+.neo-inbox-search-field input { width:100%; min-width:0; outline:0; color:#233b54; background:transparent; font-size:.74rem; }
+.neo-inbox-search-field input::placeholder { color:#97a4b3; }
+.neo-inbox-clear { min-height:40px; padding:0 13px; color:#52677c; background:#fff; border:1px solid #dce5ee; border-radius:8px; font-size:.72rem; font-weight:700; }
+.neo-inbox-clear:hover:not(:disabled) { background:#f5f8fb; }
+.neo-inbox-clear:disabled { cursor:default; opacity:.45; }
+.neo-inbox-results { margin:0; }
+.neo-conversation-table { overflow-x:auto; background:#fff; border:1px solid #e0e7ef; border-radius:0 0 13px 13px; box-shadow:0 4px 18px rgba(16,36,60,.025); }
+.neo-conversation-table-header,
+.neo-conversation-summary-row { display:grid; grid-template-columns:minmax(185px,1.15fr) minmax(205px,1.55fr) minmax(90px,.58fr) minmax(120px,.78fr) minmax(120px,.72fr) minmax(76px,.42fr); align-items:center; gap:15px; min-width:1030px; }
+.neo-conversation-table-header { padding:12px 18px; color:#66798d; background:#f7f9fb; border-bottom:1px solid #e1e8ef; font-size:.61rem; font-weight:820; letter-spacing:.055em; text-transform:uppercase; }
+.neo-conversation-table-body { background:#fff; }
+.neo-conversations .neo-thread { margin:0 !important; overflow:visible; background:#fff; border:0 !important; border-bottom:1px solid #edf1f5 !important; border-radius:0 !important; box-shadow:none !important; }
+.neo-conversations .neo-thread:last-child { border-bottom:0 !important; }
+.neo-conversations .neo-conversation-summary-row { width:100%; min-height:70px; padding:12px 18px; color:#2b3e53; background:#fff; border:0; text-align:left; transition:background .14s ease; }
+.neo-conversations .neo-conversation-summary-row:hover,
+.neo-conversations .neo-conversation-summary-row[aria-expanded="true"] { background:#f7fafc; }
+.neo-conversation-customer { display:flex; min-width:0; align-items:center; gap:10px; }
+.neo-conversation-avatar { display:grid; width:34px; height:34px; flex:0 0 34px; place-items:center; color:#1c6b7a; background:#e5f4f5; border:1px solid #d7ecee; border-radius:50%; font-size:.75rem; font-weight:850; text-transform:uppercase; }
+.neo-conversation-customer-text,
+.neo-conversation-last-message,
+.neo-conversation-date,
+.neo-conversation-attention { display:flex; min-width:0; flex-direction:column; gap:4px; }
+.neo-conversation-customer-text strong { overflow:hidden; color:#233951; font-size:.76rem; font-weight:780; text-overflow:ellipsis; white-space:nowrap; }
+.neo-conversation-customer-text small,
+.neo-conversation-last-message small,
+.neo-conversation-date small { overflow:hidden; color:#94a1af; font-size:.63rem; text-overflow:ellipsis; white-space:nowrap; }
+.neo-conversation-last-message > span { overflow:hidden; color:#53667b; font-size:.72rem; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
+.neo-conversation-direction,
+.neo-mode-pill { display:inline-flex; width:max-content; max-width:100%; align-items:center; justify-content:center; padding:5px 8px; border-radius:5px; font-size:.61rem; font-weight:760; white-space:nowrap; }
+.neo-conversation-direction.is-incoming { color:#176e62; background:#e7f6f1; }
+.neo-conversation-direction.is-outgoing { color:#516b9b; background:#edf2ff; }
+.neo-conversation-date strong { color:#54687d; font-size:.7rem; font-weight:730; }
+.neo-mode-pill.is-human { color:#94570b; background:#fff2d9; }
+.neo-mode-pill.is-bot { color:#167657; background:#e4f7ed; }
+.neo-mode-pill.is-unknown { color:#68798b; background:#eef2f6; }
+.neo-conversation-message-count { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#6d7f92; font-size:.7rem; }
+.neo-conversation-message-count strong { min-width:24px; color:#52677c; font-size:.72rem; font-weight:780; font-variant-numeric:tabular-nums; }
+.neo-conversation-message-count > span { color:#9aa8b6; font-size:1rem; }
+.neo-conversation-summary-row:focus-visible { outline:2px solid #108392; outline-offset:-3px; }
+.neo-conversation-detail { border-top:1px solid #e6edf3; background:#fff; }
+.neo-conversation-detail > div:first-child { background:#f7f9fb !important; }
+.neo-conversation-detail .neo-message-scroll { border-top:1px solid #e9eef4; }
+@media (max-width:900px) {
+  .neo-inbox-heading { align-items:flex-start; }
+  .neo-inbox-toolbar { align-items:stretch; flex-direction:column; gap:14px; }
+  .neo-inbox-search { min-width:0; width:100%; }
+}
+@media (max-width:560px) {
+  .neo-inbox-heading { gap:14px; flex-direction:column; }
+  .neo-inbox-heading h1 { font-size:1.6rem; }
+  .neo-inbox-heading-copy > p:last-child { font-size:.75rem; }
+  .neo-inbox-refresh { min-height:38px; }
+  .neo-inbox-stat-tabs { margin-left:-2px; margin-right:-2px; padding:0 4px; }
+  .neo-inbox-stat-tab { min-height:43px; padding:0 11px; font-size:.66rem; }
+  .neo-inbox-toolbar { padding:15px 13px; }
+  .neo-inbox-search { align-items:stretch; flex-direction:column; }
+  .neo-inbox-clear { width:100%; }
 }
