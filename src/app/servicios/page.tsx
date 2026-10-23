@@ -196,7 +196,8 @@ export default function ServiciosPage() {
   const [form, setForm] = useState<Formulario>(formularioVacio);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [filtroEstatus, setFiltroEstatus] = useState("TODOS");
+  const [filtroEstatus, setFiltroEstatus] = useState<Estatus>("PENDIENTE");
+  const [cantidadVisible, setCantidadVisible] = useState(5);
   const [cargando, setCargando] = useState(true);
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -216,7 +217,11 @@ export default function ServiciosPage() {
       if (!res.ok || !json.ok || !Array.isArray(json.data)) {
         throw new Error(json.message || "No fue posible cargar los servicios.");
       }
-      setServicios(json.data);
+      setServicios(
+        [...json.data].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar los servicios.");
     } finally {
@@ -254,12 +259,17 @@ export default function ServiciosPage() {
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLocaleLowerCase("es-MX");
     return servicios.filter((s) => {
-      const estadoOK = filtroEstatus === "TODOS" || s.estatus === filtroEstatus;
+      const estadoOK = s.estatus === filtroEstatus;
       const contenido = [s.cliente, s.factura, s.concepto, s.paquete, s.observaciones, s.comentarios, s.estatus]
         .filter(Boolean).join(" ").toLocaleLowerCase("es-MX");
       return estadoOK && contenido.includes(q);
     });
   }, [servicios, busqueda, filtroEstatus]);
+
+  const visibles = useMemo(
+    () => filtrados.slice(-cantidadVisible),
+    [filtrados, cantidadVisible]
+  );
 
   const resumen = useMemo(() => ({
     cantidad: servicios.length,
@@ -396,6 +406,9 @@ export default function ServiciosPage() {
         throw new Error(json.message || "No fue posible guardar el servicio.");
       }
       const texto = editandoId ? "Servicio actualizado correctamente." : "Servicio registrado correctamente.";
+      const estatusGuardado = form.estatus;
+      setFiltroEstatus(estatusGuardado);
+      setCantidadVisible(5);
       setEditandoId(null);
       setForm(formularioVacio);
       await cargarServicios();
@@ -500,8 +513,9 @@ export default function ServiciosPage() {
                   {clientes.map((cliente) => <option key={cliente.id} value={cliente.nombre}>{cliente.nombre}</option>)}
                 </select>
               </label>
-              <label className={claseEtiqueta}>Número de factura
-                <input className={claseCampo} value={form.factura} onChange={(e) => cambiar("factura", e.target.value)} placeholder="Ej. FAC-001" maxLength={100} />
+              <label className={claseEtiqueta}>Número consecutivo de factura
+                <input className={claseCampo} value={editandoId ? (form.factura || "Sin número asignado") : "Se asigna al guardar"} readOnly aria-readonly="true" />
+                <span className="mt-1 block text-xs font-normal text-slate-500">{editandoId ? "El número existente se conserva al editar." : "El sistema asignará el siguiente número consecutivo al registrar el servicio."}</span>
               </label>
               <label className={claseEtiqueta}>Paquete o referencia
                 <input className={claseCampo} value={form.paquete} onChange={(e) => cambiar("paquete", e.target.value)} placeholder="Nombre o referencia" maxLength={200} />
@@ -583,26 +597,39 @@ export default function ServiciosPage() {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div><h2 className="text-xl font-bold">Registro de servicios</h2><p className="mt-1 text-sm text-slate-500">Consulta, filtra y edita los registros almacenados.</p></div>
+            <div><h2 className="text-xl font-bold">Servicios {textoEstatus(filtroEstatus).toLowerCase()}</h2><p className="mt-1 text-sm text-slate-500">Cada estatus tiene su propia lista. Los cinco registros más recientes aparecen primero en la vista.</p></div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => void cargarServicios()} disabled={cargando} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-60">{cargando ? "Actualizando..." : "Actualizar"}</button>
               <button type="button" onClick={exportarExcel} disabled={filtrados.length === 0} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-50">Exportar Excel</button>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <label className={claseEtiqueta}>Buscar
-              <input className={claseCampo} type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Cliente, factura, concepto o paquete" />
-            </label>
-            <label className={claseEtiqueta}>Filtrar por estatus
-              <select className={claseCampo} value={filtroEstatus} onChange={(e) => setFiltroEstatus(e.target.value)}>
-                <option value="TODOS">Todos los estatus</option>
-                {estatusOpciones.map((opcion) => <option key={opcion} value={opcion}>{textoEstatus(opcion)}</option>)}
-              </select>
+          <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Listas de servicios por estatus">
+            {estatusOpciones.map((opcion) => {
+              const cantidad = servicios.filter((servicio) => servicio.estatus === opcion).length;
+              const activo = filtroEstatus === opcion;
+              return (
+                <button
+                  key={opcion}
+                  type="button"
+                  role="tab"
+                  aria-selected={activo}
+                  onClick={() => { setFiltroEstatus(opcion); setCantidadVisible(5); }}
+                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${activo ? "border-cyan-800 bg-cyan-800 text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+                >
+                  {textoEstatus(opcion)} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${activo ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>{cantidad}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <label className={claseEtiqueta}>Buscar en {textoEstatus(filtroEstatus).toLowerCase()}
+              <input className={claseCampo} type="search" value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setCantidadVisible(5); }} placeholder="Cliente, factura, concepto o paquete" />
             </label>
           </div>
 
-          <p className="mt-4 text-sm text-slate-500">Mostrando {filtrados.length} de {servicios.length} servicio(s).</p>
+          <p className="mt-4 text-sm text-slate-500">Mostrando {visibles.length} de {filtrados.length} servicio(s) en la lista de {textoEstatus(filtroEstatus).toLowerCase()}.</p>
 
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-[1450px] w-full border-collapse text-left text-sm">
@@ -613,8 +640,8 @@ export default function ServiciosPage() {
                 {cargando ? (
                   <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-500">Cargando servicios...</td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-500">{servicios.length === 0 ? "Todavía no hay servicios registrados." : "No hay servicios que coincidan con los filtros."}</td></tr>
-                ) : filtrados.map((s) => (
+                  <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-500">{servicios.length === 0 ? "Todavía no hay servicios registrados." : busqueda.trim() ? "No hay servicios que coincidan con la búsqueda." : `No hay servicios con estatus ${textoEstatus(filtroEstatus).toLowerCase()}.`}</td></tr>
+                ) : visibles.map((s) => (
                   <tr key={s.id} className="align-top hover:bg-slate-50">
                     <td className="px-4 py-4"><p className="font-bold text-slate-900">{s.cliente}</p><p className="mt-1 text-xs text-slate-500">Factura: {s.factura || "Sin factura"}</p>{s.paquete && <p className="mt-1 text-xs text-slate-500">Ref.: {s.paquete}</p>}</td>
                     <td className="max-w-xs whitespace-pre-wrap px-4 py-4">{s.concepto}</td>
@@ -634,7 +661,18 @@ export default function ServiciosPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">En pantallas pequeñas puedes deslizar la tabla horizontalmente. Exportar Excel descarga los resultados que coinciden con los filtros actuales.</p>
+          {filtrados.length > visibles.length && (
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setCantidadVisible((actual) => actual + 5)}
+                className="rounded-xl border border-cyan-200 bg-white px-5 py-3 text-sm font-bold text-cyan-800 transition hover:bg-cyan-50"
+              >
+                Cargar 5 más ({filtrados.length - visibles.length} restantes)
+              </button>
+            </div>
+          )}
+          <p className="mt-3 text-xs leading-5 text-slate-500">En pantallas pequeñas puedes deslizar la tabla horizontalmente. Exportar Excel descarga todos los registros que coinciden con la búsqueda en la lista seleccionada, no solo los que se muestran en pantalla.</p>
         </section>
 
         <footer className="pb-5 text-center text-xs text-slate-400">Neo Transportaciones · Panel privado</footer>
