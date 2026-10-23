@@ -86,7 +86,7 @@ export default function ClientesClient() {
     return <label key={key} className={etiqueta+" "+wide}>{label}<input type={opts.type||"text"} value={value} onChange={e=>onChange(e.target.value)} className={campo} placeholder={opts.placeholder||""} maxLength={key==="notas"?2000:key==="direccion"?500:200}/></label>;
   }
 
-  return <main className="min-h-screen bg-slate-100 text-slate-800">
+  return <main className="neo-app min-h-screen bg-slate-100 text-slate-800">
     <header className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 px-5 py-5 text-white sm:px-8">
       <div><p className="text-xl font-bold">NEO</p><p className="text-xs tracking-wider text-slate-300">TRANSPORTACIONES</p></div>
       <div className="flex flex-wrap gap-2"><Link href="/" className="rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10">Volver al panel</Link><a href="/servicios" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-cyan-200">Servicios</a></div>
