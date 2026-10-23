@@ -523,7 +523,7 @@ export default function ConversationsInbox() {
                 return (
                   <article
                     key={thread.key}
-                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    className="neo-thread overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                   >
                     {/* Fila compacta: nombre y una sola línea del mensaje */}
                     <button
@@ -613,7 +613,7 @@ export default function ConversationsInbox() {
                         )}
 
                         {/* Mensajes recientes: los más nuevos quedan abajo y se muestran al abrir. */}
-                        <div ref={messagesContainerRef} className="max-h-[520px] space-y-3 overflow-y-auto bg-slate-50 p-4 sm:p-5">
+                        <div ref={messagesContainerRef} className="neo-message-scroll max-h-[520px] space-y-3 overflow-y-auto bg-slate-50 p-4 sm:p-5">
                           {visibleMessages.map((message, index) => {
                             const incoming = isIncoming(message);
 
@@ -628,10 +628,10 @@ export default function ConversationsInbox() {
                                 }`}
                               >
                                 <div
-                                  className={`w-full max-w-2xl rounded-2xl border p-3 sm:p-4 ${
+                                  className={`neo-message-bubble w-full max-w-2xl rounded-2xl border p-3 sm:p-4 ${
                                     incoming
-                                      ? "border-slate-200 bg-white"
-                                      : "border-violet-100 bg-violet-50"
+                                      ? "neo-message-incoming border-slate-200 bg-white"
+                                      : "neo-message-outgoing border-violet-100 bg-violet-50"
                                   }`}
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
