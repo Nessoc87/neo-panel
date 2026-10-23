@@ -473,7 +473,7 @@ export default function ServiciosPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
+    <main className="neo-app min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <a href="/" aria-label="Neo Transportaciones, inicio" className="inline-flex items-center">

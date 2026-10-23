@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f6fa;
+  --foreground: #14263d;
+  --neo-navy: #10243c;
+  --neo-navy-soft: #1a3551;
+  --neo-teal: #0f7485;
+  --neo-teal-dark: #0b5f70;
+  --neo-border: #dce5ef;
+  --neo-muted: #617187;
 }
 
 @theme inline {
@@ -12,15 +18,451 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Shared visual system for all authenticated Neo screens */
+.neo-app {
+  --neo-card-shadow: 0 8px 24px rgba(16, 36, 60, 0.045), 0 1px 2px rgba(16, 36, 60, 0.04);
+  min-height: 100vh;
+  color: #172a42 !important;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(15, 116, 133, 0.055), transparent 34rem),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+.neo-app > header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 72px;
+  color: #132b45 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid #dce5ef !important;
+  box-shadow: 0 5px 20px rgba(16, 36, 60, 0.045);
+  backdrop-filter: blur(16px);
+}
+
+.neo-app > header > div {
+  width: 100%;
+}
+
+.neo-app > header p {
+  color: #617187;
+}
+
+.neo-app > header .text-xl,
+.neo-app > header .text-white {
+  color: #10243c !important;
+}
+
+.neo-app > header a,
+.neo-app > header button {
+  border-radius: 11px;
+  font-weight: 650;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.neo-app > header a:not(.bg-cyan-300):hover,
+.neo-app > header button:hover:not(:disabled) {
+  border-color: #aabccc;
+  background: #f4f8fb !important;
+  color: #0b6275 !important;
+}
+
+.neo-app > header a.bg-cyan-300,
+.neo-app > header a.bg-cyan-700,
+.neo-app > header a.bg-cyan-800 {
+  color: #ffffff !important;
+  background: #0f7485 !important;
+  border-color: #0f7485 !important;
+}
+
+.neo-app > header a.bg-cyan-300:hover,
+.neo-app > header a.bg-cyan-700:hover,
+.neo-app > header a.bg-cyan-800:hover {
+  background: #0b5f70 !important;
+  border-color: #0b5f70 !important;
+}
+
+.neo-app > div.mx-auto {
+  width: 100%;
+  max-width: 1480px !important;
+  padding-left: clamp(16px, 3.2vw, 42px) !important;
+  padding-right: clamp(16px, 3.2vw, 42px) !important;
+  padding-top: clamp(22px, 3vw, 38px) !important;
+  padding-bottom: 34px !important;
+}
+
+/* Page title/hero blocks */
+.neo-app section[class*="bg-gradient-to-r"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(102, 226, 220, 0.22), transparent 19rem),
+    linear-gradient(118deg, #10243c 0%, #153b56 58%, #0f7485 100%) !important;
+  box-shadow: 0 18px 42px rgba(16, 36, 60, 0.13);
+}
+
+.neo-app section[class*="bg-gradient-to-r"] h1 {
+  max-width: 900px;
+  color: #ffffff !important;
+  font-size: clamp(1.85rem, 3vw, 2.75rem);
+  font-weight: 760;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.neo-app section[class*="bg-gradient-to-r"] p:first-child {
+  color: #8ee7e0 !important;
+  font-size: 0.7rem;
+  letter-spacing: 0.19em;
+  font-weight: 800;
+}
+
+.neo-app section[class*="bg-gradient-to-r"] p:not(:first-child) {
+  color: #e0e9f2 !important;
+  line-height: 1.8;
+}
+
+.neo-app section[class*="bg-gradient-to-r"] a {
+  border-radius: 11px;
+  font-weight: 700;
+}
+
+/* Dashboard cards, KPI cards and module cards */
+.neo-app article {
+  border-color: var(--neo-border);
+  border-radius: 17px;
+  box-shadow: var(--neo-card-shadow);
+}
+
+.neo-app article.rounded-2xl,
+.neo-app section.rounded-2xl.bg-white,
+.neo-app form.rounded-2xl.bg-white {
+  border: 1px solid #dce5ef !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: var(--neo-card-shadow) !important;
+}
+
+.neo-app article:hover {
+  border-color: #c5d5e3;
+}
+
+.neo-app section.grid article p:first-child {
+  color: #607289;
+  font-size: 0.79rem;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+}
+
+.neo-app section.grid article p.text-3xl,
+.neo-app section.grid article p.text-2xl {
+  color: #10243c;
+  font-size: clamp(1.65rem, 2.2vw, 2rem);
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Module cards on the home dashboard */
+.neo-app #modulos article {
+  min-height: 166px;
+  padding: 26px !important;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.neo-app #modulos article:hover {
+  transform: translateY(-2px);
+  border-color: #bed4e3;
+  box-shadow: 0 16px 34px rgba(16, 36, 60, 0.085);
+}
+
+.neo-app #modulos article a {
+  height: 54px;
+  width: 54px;
+  border-radius: 15px;
+  color: #0e6274;
+  background: linear-gradient(145deg, #e2f6f7, #c8edf0) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 116, 133, 0.05);
+  font-size: 0.95rem;
+  letter-spacing: -0.025em;
+}
+
+.neo-app #modulos article a:hover {
+  color: #ffffff !important;
+  background: #0f7485 !important;
+  box-shadow: 0 7px 16px rgba(15, 116, 133, 0.18);
+}
+
+.neo-app #modulos article h3 {
+  color: #132b45;
+  font-size: 1.08rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.neo-app #modulos article p {
+  color: #5a6d82;
+  line-height: 1.75;
+}
+
+/* Tables: clean enterprise reporting style */
+.neo-app table {
+  border-collapse: separate !important;
+  border-spacing: 0;
+  width: 100%;
+  color: #26384e;
+  font-variant-numeric: tabular-nums;
+}
+
+.neo-app table thead {
+  background: #10243c !important;
+  color: #f8fbff !important;
+}
+
+.neo-app table thead tr {
+  background: #10243c !important;
+}
+
+.neo-app table thead th {
+  position: relative;
+  padding: 14px 16px !important;
+  border-bottom: 1px solid #27415c !important;
+  color: #f8fbff !important;
+  background: #10243c !important;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  line-height: 1.45;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.neo-app table tbody tr {
+  background: #ffffff;
+  transition: background-color 140ms ease;
+}
+
+.neo-app table tbody tr:nth-child(even) {
+  background: #f9fbfd;
+}
+
+.neo-app table tbody tr:hover {
+  background: #eef7f9 !important;
+}
+
+.neo-app table tbody td {
+  padding: 15px 16px !important;
+  border-bottom: 1px solid #e8eef4;
+  color: #34465c;
+  line-height: 1.55;
+  vertical-align: top;
+}
+
+.neo-app table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.neo-app table tbody td .font-bold,
+.neo-app table tbody td .font-semibold {
+  color: #152a42;
+}
+
+.neo-app .overflow-x-auto {
+  border-color: #dce5ef;
+  border-radius: 15px;
+}
+
+/* Inputs and search/filter controls */
+.neo-app input:not([type="checkbox"]):not([type="radio"]),
+.neo-app select,
+.neo-app textarea {
+  border: 1px solid #cbd7e4 !important;
+  border-radius: 11px !important;
+  color: #152a42 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(16, 36, 60, 0.035);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.neo-app input::placeholder,
+.neo-app textarea::placeholder {
+  color: #97a6b7;
+}
+
+.neo-app input:not([type="checkbox"]):not([type="radio"]):focus,
+.neo-app select:focus,
+.neo-app textarea:focus {
+  border-color: #0f8492 !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 132, 146, 0.13) !important;
+}
+
+.neo-app input[type="checkbox"],
+.neo-app input[type="radio"] {
+  accent-color: #0f7485;
+}
+
+.neo-app label {
+  line-height: 1.5;
+}
+
+.neo-app button {
+  border-radius: 11px;
+  font-weight: 650;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.neo-app button:focus-visible,
+.neo-app a:focus-visible {
+  outline: 3px solid rgba(15, 132, 146, 0.42);
+  outline-offset: 3px;
+}
+
+.neo-app button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.neo-app button:disabled {
+  opacity: 0.58;
+}
+
+/* Status tabs and small status labels */
+.neo-app [role="tablist"] button[aria-selected="true"] {
+  background: #10243c !important;
+  color: #ffffff !important;
+  border-color: #10243c !important;
+  box-shadow: 0 5px 13px rgba(16, 36, 60, 0.13);
+}
+
+.neo-app [role="tablist"] button[aria-selected="false"] {
+  background: #ffffff;
+  border-color: #d3deea;
+  color: #42566e;
+}
+
+.neo-app .rounded-full {
+  letter-spacing: 0.005em;
+}
+
+/* Conversation inbox and chat timeline */
+.neo-conversations .neo-message-scroll {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(15, 116, 133, 0.04), transparent 20rem),
+    #f4f8fb !important;
+  border-top: 1px solid #e0e9f0;
+  border-bottom: 1px solid #e0e9f0;
+  scroll-behavior: smooth;
+}
+
+.neo-conversations .neo-message-bubble {
+  max-width: min(86%, 760px) !important;
+  border-radius: 17px !important;
+  box-shadow: 0 3px 12px rgba(16, 36, 60, 0.045);
+}
+
+.neo-conversations .neo-message-incoming {
+  border-color: #dce5ef !important;
+  border-top-left-radius: 5px !important;
+  background: #ffffff !important;
+}
+
+.neo-conversations .neo-message-outgoing {
+  border-color: #c6e7e8 !important;
+  border-top-right-radius: 5px !important;
+  background: #e7f5f5 !important;
+}
+
+.neo-conversations .neo-message-bubble p {
+  overflow-wrap: anywhere;
+}
+
+.neo-conversations .neo-thread > button:first-child {
+  min-height: 76px;
+}
+
+.neo-conversations .neo-thread > button:first-child:hover {
+  background: #f6fafc !important;
+}
+
+.neo-conversations .neo-message-scroll::-webkit-scrollbar,
+.neo-app *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.neo-conversations .neo-message-scroll::-webkit-scrollbar-thumb,
+.neo-app *::-webkit-scrollbar-thumb {
+  background: #c6d3df;
+  border: 2px solid transparent;
+  border-radius: 99px;
+  background-clip: padding-box;
+}
+
+/* Alerts and notices */
+.neo-app [role="alert"],
+.neo-app [role="status"] {
+  border-radius: 13px;
+  line-height: 1.6;
+}
+
+/* Page footer */
+.neo-app footer {
+  color: #8391a2 !important;
+  font-size: 0.72rem;
+  letter-spacing: 0.025em;
+}
+
+@media (max-width: 640px) {
+  .neo-app section[class*="bg-gradient-to-r"] {
+    border-radius: 20px !important;
+  }
+
+  .neo-app table thead th,
+  .neo-app table tbody td {
+    padding: 12px !important;
+  }
+
+  .neo-conversations .neo-message-bubble {
+    max-width: 96% !important;
+  }
 }
