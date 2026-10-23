@@ -26,6 +26,7 @@ type Servicio = {
   fecha_entrega: string | null;
   fecha_pago: string | null;
   comentarios: string | null;
+  motivo_cancelacion: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -59,6 +60,7 @@ type Formulario = {
   fecha_entrega: string;
   fecha_pago: string;
   comentarios: string;
+  motivo_cancelacion: string;
 };
 
 type Respuesta = {
@@ -92,6 +94,7 @@ const formularioVacio: Formulario = {
   fecha_entrega: "",
   fecha_pago: "",
   comentarios: "",
+  motivo_cancelacion: "",
 };
 
 const estatusOpciones: Estatus[] = ["PENDIENTE", "FACTURADO", "PAGADO", "CANCELADO"];
@@ -339,6 +342,7 @@ export default function ServiciosPage() {
       fecha_entrega: servicio.fecha_entrega?.slice(0, 10) ?? "",
       fecha_pago: servicio.fecha_pago?.slice(0, 10) ?? "",
       comentarios: servicio.comentarios ?? "",
+      motivo_cancelacion: servicio.motivo_cancelacion ?? "",
     });
     setError("");
     setMensaje("");
@@ -374,6 +378,21 @@ export default function ServiciosPage() {
       setGuardando(false);
       return;
     }
+    if (form.estatus === "FACTURADO" && !form.factura.trim()) {
+      setError("Para marcar el servicio como Facturado, captura el número de factura.");
+      setGuardando(false);
+      return;
+    }
+    if (form.estatus === "CANCELADO" && !form.motivo_cancelacion.trim()) {
+      setError("Para cancelar el servicio, escribe el motivo de cancelación.");
+      setGuardando(false);
+      return;
+    }
+    if (form.estatus === "PAGADO" && !form.fecha_pago) {
+      setError("Para marcar el servicio como Pagado, selecciona la fecha de pago.");
+      setGuardando(false);
+      return;
+    }
 
     try {
       const body = {
@@ -391,6 +410,7 @@ export default function ServiciosPage() {
         fecha_entrega: form.fecha_entrega || null,
         fecha_pago: form.fecha_pago || null,
         comentarios: form.comentarios,
+        motivo_cancelacion: form.motivo_cancelacion,
       };
       const res = await fetch("/api/servicios", {
         method: editandoId ? "PATCH" : "POST",
@@ -437,6 +457,7 @@ export default function ServiciosPage() {
       "Fecha de pago": s.fecha_pago ?? "",
       Observaciones: s.observaciones ?? "",
       Comentarios: s.comentarios ?? "",
+      "Motivo de cancelación": s.motivo_cancelacion ?? "",
       "Fecha de registro": s.created_at ?? "",
     }));
     const hoja = XLSX.utils.json_to_sheet(filas);
@@ -513,9 +534,13 @@ export default function ServiciosPage() {
                   {clientes.map((cliente) => <option key={cliente.id} value={cliente.nombre}>{cliente.nombre}</option>)}
                 </select>
               </label>
-              <label className={claseEtiqueta}>Número consecutivo de factura
-                <input className={claseCampo} value={editandoId ? (form.factura || "Sin número asignado") : "Se asigna al guardar"} readOnly aria-readonly="true" />
-                <span className="mt-1 block text-xs font-normal text-slate-500">{editandoId ? "El número existente se conserva al editar." : "El sistema asignará el siguiente número consecutivo al registrar el servicio."}</span>
+              <label className={claseEtiqueta}>Número de factura{form.estatus === "FACTURADO" ? " *" : ""}
+                {form.estatus === "FACTURADO" ? (
+                  <input className={claseCampo} value={form.factura} onChange={(e) => cambiar("factura", e.target.value)} placeholder="Captura el número de factura" maxLength={100} required />
+                ) : (
+                  <input className={claseCampo} value={editandoId ? (form.factura || "Sin número asignado") : "Se asigna al guardar"} readOnly aria-readonly="true" />
+                )}
+                <span className="mt-1 block text-xs font-normal text-slate-500">{form.estatus === "FACTURADO" ? "Confirma el número consecutivo o captura el folio que corresponda. Es obligatorio para facturar." : editandoId ? "El número consecutivo existente se conserva al editar." : "El sistema asignará el siguiente número consecutivo al registrar el servicio."}</span>
               </label>
               <label className={claseEtiqueta}>Paquete o referencia
                 <input className={claseCampo} value={form.paquete} onChange={(e) => cambiar("paquete", e.target.value)} placeholder="Nombre o referencia" maxLength={200} />
@@ -555,9 +580,14 @@ export default function ServiciosPage() {
               <label className={claseEtiqueta}>Fecha de entrega
                 <input className={claseCampo} type="date" value={form.fecha_entrega} onChange={(e) => cambiar("fecha_entrega", e.target.value)} />
               </label>
-              <label className={claseEtiqueta}>Fecha de pago
-                <input className={claseCampo} type="date" value={form.fecha_pago} onChange={(e) => cambiar("fecha_pago", e.target.value)} />
-              </label>
+              {(form.estatus === "PAGADO" || Boolean(form.fecha_pago)) && <label className={claseEtiqueta}>Fecha de pago{form.estatus === "PAGADO" ? " *" : ""}
+                <input className={claseCampo} type="date" value={form.fecha_pago} onChange={(e) => cambiar("fecha_pago", e.target.value)} required={form.estatus === "PAGADO"} />
+                {form.estatus === "PAGADO" && <span className="mt-1 block text-xs font-normal text-cyan-800">La fecha de pago es obligatoria para guardar este estatus.</span>}
+              </label>}
+              {form.estatus === "CANCELADO" && <label className={`${claseEtiqueta} sm:col-span-2 lg:col-span-3`}>Motivo de cancelación *
+                <textarea className={claseCampo} value={form.motivo_cancelacion} onChange={(e) => cambiar("motivo_cancelacion", e.target.value)} rows={3} placeholder="Explica por qué se cancela este servicio" maxLength={1000} required />
+                <span className="mt-1 block text-xs font-normal text-rose-700">Debes registrar el motivo para poder cancelar el servicio.</span>
+              </label>}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -654,7 +684,7 @@ export default function ServiciosPage() {
                     <td className="px-4 py-4"><p>{fechaMostrar(s.fecha_entrega)}</p><p className="mt-1 text-xs text-slate-500">{diasEntrega(s.fecha_entrega)}</p></td>
                     <td className="px-4 py-4">{fechaMostrar(s.fecha_pago)}</td>
                     <td className="px-4 py-4"><span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${claseEstatus(s.estatus)}`}>{textoEstatus(s.estatus)}</span></td>
-                    <td className="max-w-xs px-4 py-4">{s.observaciones && <p className="mb-2 whitespace-pre-wrap text-xs text-slate-600"><strong>Observaciones: </strong>{s.observaciones}</p>}{s.comentarios && <p className="whitespace-pre-wrap text-xs text-slate-600"><strong>Comentarios: </strong>{s.comentarios}</p>}{!s.observaciones && !s.comentarios && <span className="text-xs text-slate-400">Sin detalles</span>}</td>
+                    <td className="max-w-xs px-4 py-4">{s.observaciones && <p className="mb-2 whitespace-pre-wrap text-xs text-slate-600"><strong>Observaciones: </strong>{s.observaciones}</p>}{s.comentarios && <p className="whitespace-pre-wrap text-xs text-slate-600"><strong>Comentarios: </strong>{s.comentarios}</p>}{s.motivo_cancelacion && <p className="whitespace-pre-wrap text-xs text-rose-700"><strong>Motivo de cancelación: </strong>{s.motivo_cancelacion}</p>}{!s.observaciones && !s.comentarios && !s.motivo_cancelacion && <span className="text-xs text-slate-400">Sin detalles</span>}</td>
                     <td className="px-4 py-4"><button type="button" onClick={() => editar(s)} className="rounded-lg border border-cyan-200 px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50">Editar</button></td>
                   </tr>
                 ))}
