@@ -20,6 +20,7 @@ type ServiceInput = {
   fecha_entrega?: unknown;
   fecha_pago?: unknown;
   comentarios?: unknown;
+  motivo_cancelacion?: unknown;
 };
 
 function textValue(value: unknown, maxLength = 2000): string {
@@ -135,7 +136,8 @@ export async function POST(request: NextRequest) {
   }
 
   const cliente = textValue(body.cliente, 200);
-  const factura = null; // El consecutivo se asigna con un trigger en PostgreSQL.
+  const facturaSolicitada = textValue(body.factura, 100) || null;
+  const motivoCancelacion = textValue(body.motivo_cancelacion, 1000) || null;
   const concepto = textValue(body.concepto, 1000);
   const cantidad = numericValue(body.cantidad, 1);
   const costoUnitario = numericValue(body.costo_unitario, 0);
@@ -206,6 +208,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const estatusNormalizado = estatus.toUpperCase();
+  const factura = estatusNormalizado === "FACTURADO" ? facturaSolicitada : null;
+
+  if (estatusNormalizado === "FACTURADO" && !factura) {
+    return NextResponse.json(
+      { ok: false, message: "Captura el número de factura antes de marcar el servicio como Facturado." },
+      { status: 400 }
+    );
+  }
+  if (estatusNormalizado === "CANCELADO" && !motivoCancelacion) {
+    return NextResponse.json(
+      { ok: false, message: "Indica el motivo de cancelación antes de guardar." },
+      { status: 400 }
+    );
+  }
+  if (estatusNormalizado === "PAGADO" && !fechaPago) {
+    return NextResponse.json(
+      { ok: false, message: "Selecciona la fecha de pago antes de marcar el servicio como Pagado." },
+      { status: 400 }
+    );
+  }
+
   const record = {
     cliente,
     factura,
@@ -220,6 +244,7 @@ export async function POST(request: NextRequest) {
     fecha_entrega: fechaEntrega,
     fecha_pago: fechaPago,
     comentarios: textValue(body.comentarios) || null,
+    motivo_cancelacion: motivoCancelacion,
     updated_at: new Date().toISOString(),
   };
 
@@ -304,6 +329,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const cliente = textValue(body.cliente, 200);
+  const factura = textValue(body.factura, 100) || null;
+  const motivoCancelacion = textValue(body.motivo_cancelacion, 1000) || null;
 
   const concepto = textValue(body.concepto, 1000);
 
@@ -369,8 +396,28 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  if (estatus === "FACTURADO" && !factura) {
+    return NextResponse.json(
+      { ok: false, message: "Captura el número de factura antes de marcar el servicio como Facturado." },
+      { status: 400 }
+    );
+  }
+  if (estatus === "CANCELADO" && !motivoCancelacion) {
+    return NextResponse.json(
+      { ok: false, message: "Indica el motivo de cancelación antes de guardar." },
+      { status: 400 }
+    );
+  }
+  if (estatus === "PAGADO" && !fechaPago) {
+    return NextResponse.json(
+      { ok: false, message: "Selecciona la fecha de pago antes de marcar el servicio como Pagado." },
+      { status: 400 }
+    );
+  }
+
   const record = {
     cliente,
+    factura,
     cantidad,
     concepto,
     costo_unitario: costoUnitario,
@@ -382,6 +429,7 @@ export async function PATCH(request: NextRequest) {
     fecha_entrega: fechaEntrega,
     fecha_pago: fechaPago,
     comentarios: textValue(body.comentarios) || null,
+    motivo_cancelacion: motivoCancelacion,
     updated_at: new Date().toISOString(),
   };
 
