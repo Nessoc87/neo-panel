@@ -373,7 +373,7 @@ export default function ConversationsInbox() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
+    <main className="neo-app neo-conversations min-h-screen bg-slate-100 text-slate-800">
       <header className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 px-5 py-5 text-white sm:px-8">
         <div>
           <p className="text-xl font-bold">NEO</p>
