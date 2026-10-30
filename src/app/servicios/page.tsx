@@ -883,7 +883,7 @@ export default function ServiciosPage() {
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-900 text-white"><tr>
-                <th className="px-4 py-3">Cliente / orden interno / factura</th><th className="px-4 py-3">Conceptos y partidas</th><th className="px-4 py-3 text-right">Partidas</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
+                <th className="px-4 py-3">Cliente / {filtroEstatus === "PENDIENTE" ? "orden interno" : "factura"}</th><th className="px-4 py-3">Conceptos y partidas</th><th className="px-4 py-3 text-right">Partidas</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
               </tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {cargando ? (
@@ -894,8 +894,14 @@ export default function ServiciosPage() {
                   <tr key={s.id} className="align-top hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <p className="font-bold text-slate-900">{s.cliente}</p>
-                      <p className="mt-1 text-xs font-semibold text-teal-800">Orden interno: {ordenesInternos.get(s.id) ?? "—"}</p>
-                      <p className="mt-1 text-xs text-slate-500">Factura real: {s.factura || "Sin factura"}</p>
+                      {filtroEstatus === "PENDIENTE" ? (
+                        <>
+                          <p className="mt-1 text-xs font-semibold text-teal-800">Orden interno: {ordenesInternos.get(s.id) ?? "—"}</p>
+                          <p className="mt-1 text-xs text-slate-500">Factura pendiente</p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-slate-500">Factura: {s.factura || "Factura pendiente"}</p>
+                      )}
                       {s.paquete && <p className="mt-1 text-xs text-slate-500">Ref.: {s.paquete}</p>}
                     </td>
                     <td className="max-w-sm px-4 py-4">
