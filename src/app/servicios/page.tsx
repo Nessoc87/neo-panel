@@ -1006,12 +1006,6 @@ export default function ServiciosPage() {
                     </td>
                     <td className="max-w-sm px-4 py-4">
                       <p className="whitespace-pre-wrap font-semibold text-slate-800">{s.concepto}</p>
-                      {Array.isArray(s.conceptos_detalle) && s.conceptos_detalle.length>0 && <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
-                        {s.conceptos_detalle.map((linea,indice)=><div key={`${s.id}-${indice}`} className="text-xs leading-5 text-slate-500">
-                          <p className="font-semibold text-slate-700">{descripcionCompleta(linea.concepto, Array.isArray(linea.subconceptos) ? linea.subconceptos : [])}</p>
-                          <p>{numero(linea.cantidad).toLocaleString("es-MX")} × {dinero(linea.costo_unitario)} = <strong className="text-slate-700">{dinero(linea.subtotal??numero(linea.cantidad)*numero(linea.costo_unitario))}</strong></p>
-                        </div>)}
-                      </div>}
                     </td>
                     <td className="px-4 py-4 text-right">{cantidadPartidas(s)}</td>
                     <td className="px-4 py-4 text-right font-semibold">{dinero(s.subtotal)}</td>
