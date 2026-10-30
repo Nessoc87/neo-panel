@@ -326,6 +326,19 @@ export default function ServiciosPage() {
     });
   }, [servicios, busqueda, filtroEstatus]);
 
+  // Orden interno independiente por estatus. Se recalcula al cambiar el estatus
+  // de un servicio y nunca altera ni sustituye el folio real de factura.
+  const ordenesInternos = useMemo(() => {
+    const colaDelEstatus = servicios
+      .filter((servicio) => servicio.estatus === filtroEstatus)
+      .sort((a, b) => {
+        const diferencia = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return diferencia !== 0 ? diferencia : a.id.localeCompare(b.id);
+      });
+
+    return new Map(colaDelEstatus.map((servicio, indice) => [servicio.id, indice + 1]));
+  }, [servicios, filtroEstatus]);
+
   const visibles = useMemo(
     () => filtrados.slice(-cantidadVisible),
     [filtrados, cantidadVisible]
@@ -870,7 +883,7 @@ export default function ServiciosPage() {
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-900 text-white"><tr>
-                <th className="px-4 py-3">Cliente / factura</th><th className="px-4 py-3">Conceptos y partidas</th><th className="px-4 py-3 text-right">Partidas</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
+                <th className="px-4 py-3">Cliente / orden interno / factura</th><th className="px-4 py-3">Conceptos y partidas</th><th className="px-4 py-3 text-right">Partidas</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
               </tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {cargando ? (
@@ -879,7 +892,12 @@ export default function ServiciosPage() {
                   <tr><td colSpan={12} className="px-4 py-12 text-center text-slate-500">{servicios.length === 0 ? "Todavía no hay servicios registrados." : busqueda.trim() ? "No hay servicios que coincidan con la búsqueda." : `No hay servicios con estatus ${textoEstatus(filtroEstatus).toLowerCase()}.`}</td></tr>
                 ) : visibles.map((s) => (
                   <tr key={s.id} className="align-top hover:bg-slate-50">
-                    <td className="px-4 py-4"><p className="font-bold text-slate-900">{s.cliente}</p><p className="mt-1 text-xs text-slate-500">Factura: {s.factura || "Sin factura"}</p>{s.paquete && <p className="mt-1 text-xs text-slate-500">Ref.: {s.paquete}</p>}</td>
+                    <td className="px-4 py-4">
+                      <p className="font-bold text-slate-900">{s.cliente}</p>
+                      <p className="mt-1 text-xs font-semibold text-teal-800">Orden interno: {ordenesInternos.get(s.id) ?? "—"}</p>
+                      <p className="mt-1 text-xs text-slate-500">Factura real: {s.factura || "Sin factura"}</p>
+                      {s.paquete && <p className="mt-1 text-xs text-slate-500">Ref.: {s.paquete}</p>}
+                    </td>
                     <td className="max-w-sm px-4 py-4">
                       <p className="whitespace-pre-wrap font-semibold text-slate-800">{s.concepto}</p>
                       {Array.isArray(s.conceptos_detalle) && s.conceptos_detalle.length>0 && <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
@@ -973,18 +991,6 @@ export default function ServiciosPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className={claseEtiqueta}>Número de factura
-                    <input
-                      className={claseCampo}
-                      value={formRapido.factura}
-                      onChange={(e) => cambiarRapido("factura", e.target.value)}
-                      placeholder="Ej. 2056"
-                      maxLength={100}
-                      required={formRapido.estatus === "FACTURADO"}
-                    />
-                    <span className="mt-1 block text-xs font-normal text-slate-500">Puedes corregir el folio sin abrir las partidas del servicio.</span>
-                  </label>
-
                   <label className={claseEtiqueta}>Estatus *
                     <select
                       className={claseCampo}
@@ -997,6 +1003,26 @@ export default function ServiciosPage() {
                       ))}
                     </select>
                   </label>
+
+                  {(formRapido.estatus === "FACTURADO" || Boolean(edicionRapida.factura)) && (
+                    <label className={`${claseEtiqueta} rounded-xl border ${edicionRapida.estatus !== "FACTURADO" && formRapido.estatus === "FACTURADO" ? "border-amber-300 bg-amber-50 p-3" : "border-slate-200 p-3"}`}>
+                      Número de factura{formRapido.estatus === "FACTURADO" ? " *" : ""}
+                      <input
+                        className={claseCampo}
+                        value={formRapido.factura}
+                        onChange={(e) => cambiarRapido("factura", e.target.value)}
+                        placeholder="Ej. 2056"
+                        maxLength={100}
+                        required={formRapido.estatus === "FACTURADO"}
+                        autoFocus={edicionRapida.estatus !== "FACTURADO" && formRapido.estatus === "FACTURADO"}
+                      />
+                      <span className="mt-1 block text-xs font-normal text-slate-600">
+                        {edicionRapida.estatus !== "FACTURADO" && formRapido.estatus === "FACTURADO"
+                          ? "Ingresa el folio real de la factura para confirmar el cambio a Facturado."
+                          : "Puedes corregir el folio sin abrir las partidas del servicio."}
+                      </span>
+                    </label>
+                  )}
 
                   <label className={claseEtiqueta}>Paquete o referencia
                     <input
