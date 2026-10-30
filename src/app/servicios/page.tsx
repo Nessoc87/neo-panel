@@ -82,6 +82,17 @@ type Formulario = {
   motivo_cancelacion: string;
 };
 
+type FormularioRapido = {
+  factura: string;
+  estatus: Estatus;
+  paquete: string;
+  fecha_entrega: string;
+  fecha_pago: string;
+  observaciones: string;
+  comentarios: string;
+  motivo_cancelacion: string;
+};
+
 type Respuesta = {
   ok?: boolean;
   message?: string;
@@ -230,6 +241,20 @@ export default function ServiciosPage() {
   const [conceptos, setConceptos] = useState<ConceptoCatalogo[]>([]);
   const [form, setForm] = useState<Formulario>(crearFormularioVacio);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [edicionRapida, setEdicionRapida] = useState<Servicio | null>(null);
+  const [formRapido, setFormRapido] = useState<FormularioRapido>({
+    factura: "",
+    estatus: "PENDIENTE",
+    paquete: "",
+    fecha_entrega: "",
+    fecha_pago: "",
+    observaciones: "",
+    comentarios: "",
+    motivo_cancelacion: "",
+  });
+  const [guardandoRapido, setGuardandoRapido] = useState(false);
+  const [errorRapido, setErrorRapido] = useState("");
+  const [mensajeRapido, setMensajeRapido] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus>("PENDIENTE");
   const [cantidadVisible, setCantidadVisible] = useState(5);
@@ -411,6 +436,90 @@ export default function ServiciosPage() {
     setError("");
     setMensaje("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function abrirEdicionRapida(servicio: Servicio) {
+    setEdicionRapida(servicio);
+    setFormRapido({
+      factura: servicio.factura ?? "",
+      estatus: servicio.estatus ?? "PENDIENTE",
+      paquete: servicio.paquete ?? "",
+      fecha_entrega: servicio.fecha_entrega?.slice(0, 10) ?? "",
+      fecha_pago: servicio.fecha_pago?.slice(0, 10) ?? "",
+      observaciones: servicio.observaciones ?? "",
+      comentarios: servicio.comentarios ?? "",
+      motivo_cancelacion: servicio.motivo_cancelacion ?? "",
+    });
+    setErrorRapido("");
+    setMensajeRapido("");
+  }
+
+  function cambiarRapido<K extends keyof FormularioRapido>(
+    clave: K,
+    valor: FormularioRapido[K]
+  ) {
+    setFormRapido((actual) => ({ ...actual, [clave]: valor }));
+  }
+
+  async function guardarEdicionRapida(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!edicionRapida) return;
+
+    setGuardandoRapido(true);
+    setErrorRapido("");
+
+    if (formRapido.estatus === "FACTURADO" && !formRapido.factura.trim()) {
+      setErrorRapido("Captura el número de factura antes de marcar el servicio como Facturado.");
+      setGuardandoRapido(false);
+      return;
+    }
+    if (formRapido.estatus === "PAGADO" && !formRapido.fecha_pago) {
+      setErrorRapido("Selecciona la fecha de pago antes de marcar el servicio como Pagado.");
+      setGuardandoRapido(false);
+      return;
+    }
+    if (formRapido.estatus === "CANCELADO" && !formRapido.motivo_cancelacion.trim()) {
+      setErrorRapido("Escribe el motivo antes de cancelar el servicio.");
+      setGuardandoRapido(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/servicios/quick", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: edicionRapida.id,
+          ...formRapido,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        data?: Servicio;
+      };
+
+      if (res.status === 401) {
+        window.location.assign("/login");
+        return;
+      }
+      if (!res.ok || !json.ok || !json.data) {
+        throw new Error(json.message || "No fue posible guardar los cambios rápidos.");
+      }
+
+      setServicios((actuales) =>
+        actuales.map((servicio) =>
+          servicio.id === json.data!.id ? json.data! : servicio
+        )
+      );
+      setEdicionRapida(null);
+      setErrorRapido("");
+      setMensajeRapido("Cambios guardados. El servicio se actualizó sin modificar sus conceptos ni importes.");
+    } catch (e) {
+      setErrorRapido(e instanceof Error ? e.message : "Ocurrió un error al guardar los cambios.");
+    } finally {
+      setGuardandoRapido(false);
+    }
   }
 
   function cancelarEdicion() {
@@ -725,6 +834,12 @@ export default function ServiciosPage() {
             </div>
           </div>
 
+          {mensajeRapido && (
+            <div role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              {mensajeRapido}
+            </div>
+          )}
+
           <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Listas de servicios por estatus">
             {estatusOpciones.map((opcion) => {
               const cantidad = servicios.filter((servicio) => servicio.estatus === opcion).length;
@@ -782,7 +897,24 @@ export default function ServiciosPage() {
                     <td className="px-4 py-4">{fechaMostrar(s.fecha_pago)}</td>
                     <td className="px-4 py-4"><span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${claseEstatus(s.estatus)}`}>{textoEstatus(s.estatus)}</span></td>
                     <td className="max-w-xs px-4 py-4">{s.observaciones && <p className="mb-2 whitespace-pre-wrap text-xs text-slate-600"><strong>Observaciones: </strong>{s.observaciones}</p>}{s.comentarios && <p className="whitespace-pre-wrap text-xs text-slate-600"><strong>Comentarios: </strong>{s.comentarios}</p>}{s.motivo_cancelacion && <p className="whitespace-pre-wrap text-xs text-rose-700"><strong>Motivo de cancelación: </strong>{s.motivo_cancelacion}</p>}{!s.observaciones && !s.comentarios && !s.motivo_cancelacion && <span className="text-xs text-slate-400">Sin detalles</span>}</td>
-                    <td className="px-4 py-4"><button type="button" onClick={() => editar(s)} className="rounded-lg border border-cyan-200 px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50">Editar</button></td>
+                    <td className="px-4 py-4">
+                      <div className="flex min-w-[128px] flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirEdicionRapida(s)}
+                          className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100"
+                        >
+                          Edición rápida
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => editar(s)}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                        >
+                          Editar completo
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -801,6 +933,167 @@ export default function ServiciosPage() {
           )}
           <p className="mt-3 text-xs leading-5 text-slate-500">En pantallas pequeñas puedes deslizar la tabla horizontalmente. Exportar Excel descarga todos los registros que coinciden con la búsqueda en la lista seleccionada, no solo los que se muestran en pantalla.</p>
         </section>
+
+        {edicionRapida && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 sm:p-6">
+            <button
+              type="button"
+              aria-label="Cerrar edición rápida"
+              onClick={() => setEdicionRapida(null)}
+              className="absolute inset-0 h-full w-full cursor-default"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="quick-edit-title"
+              className="relative z-10 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+            >
+              <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-teal-700">Actualización administrativa</p>
+                  <h2 id="quick-edit-title" className="mt-1 text-xl font-extrabold text-slate-900">Edición rápida</h2>
+                  <p className="mt-1 text-sm text-slate-600">{edicionRapida.cliente} · Factura actual: {edicionRapida.factura || "Sin factura"}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEdicionRapida(null)}
+                  disabled={guardandoRapido}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cerrar
+                </button>
+              </header>
+
+              <form onSubmit={guardarEdicionRapida} className="space-y-5 px-5 py-5 sm:px-6">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Servicio seleccionado</p>
+                  <p className="mt-1 font-semibold text-slate-900">{edicionRapida.concepto}</p>
+                  <p className="mt-1 text-sm text-slate-600">Total: <strong>{dinero(edicionRapida.total)}</strong></p>
+                  <p className="mt-2 text-xs text-slate-500">Esta pantalla solo cambia factura y datos administrativos. Los conceptos, cantidades, precios e impuestos no se modifican.</p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={claseEtiqueta}>Número de factura
+                    <input
+                      className={claseCampo}
+                      value={formRapido.factura}
+                      onChange={(e) => cambiarRapido("factura", e.target.value)}
+                      placeholder="Ej. 2056"
+                      maxLength={100}
+                      required={formRapido.estatus === "FACTURADO"}
+                    />
+                    <span className="mt-1 block text-xs font-normal text-slate-500">Puedes corregir el folio sin abrir las partidas del servicio.</span>
+                  </label>
+
+                  <label className={claseEtiqueta}>Estatus *
+                    <select
+                      className={claseCampo}
+                      value={formRapido.estatus}
+                      onChange={(e) => cambiarRapido("estatus", e.target.value as Estatus)}
+                      required
+                    >
+                      {estatusOpciones.map((opcion) => (
+                        <option key={opcion} value={opcion}>{textoEstatus(opcion)}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={claseEtiqueta}>Paquete o referencia
+                    <input
+                      className={claseCampo}
+                      value={formRapido.paquete}
+                      onChange={(e) => cambiarRapido("paquete", e.target.value)}
+                      placeholder="Nombre o referencia"
+                      maxLength={200}
+                    />
+                  </label>
+
+                  <label className={claseEtiqueta}>Fecha de entrega
+                    <input
+                      className={claseCampo}
+                      type="date"
+                      value={formRapido.fecha_entrega}
+                      onChange={(e) => cambiarRapido("fecha_entrega", e.target.value)}
+                    />
+                  </label>
+
+                  {(formRapido.estatus === "PAGADO" || Boolean(formRapido.fecha_pago)) && (
+                    <label className={claseEtiqueta}>Fecha de pago{formRapido.estatus === "PAGADO" ? " *" : ""}
+                      <input
+                        className={claseCampo}
+                        type="date"
+                        value={formRapido.fecha_pago}
+                        onChange={(e) => cambiarRapido("fecha_pago", e.target.value)}
+                        required={formRapido.estatus === "PAGADO"}
+                      />
+                    </label>
+                  )}
+
+                  {formRapido.estatus === "CANCELADO" && (
+                    <label className={`${claseEtiqueta} sm:col-span-2`}>Motivo de cancelación *
+                      <textarea
+                        className={claseCampo}
+                        value={formRapido.motivo_cancelacion}
+                        onChange={(e) => cambiarRapido("motivo_cancelacion", e.target.value)}
+                        rows={2}
+                        maxLength={1000}
+                        placeholder="Explica por qué se cancela el servicio"
+                        required
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={claseEtiqueta}>Observaciones
+                    <textarea
+                      className={claseCampo}
+                      value={formRapido.observaciones}
+                      onChange={(e) => cambiarRapido("observaciones", e.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="Notas internas sobre el servicio"
+                    />
+                  </label>
+                  <label className={claseEtiqueta}>Comentarios
+                    <textarea
+                      className={claseCampo}
+                      value={formRapido.comentarios}
+                      onChange={(e) => cambiarRapido("comentarios", e.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="Seguimiento, acuerdos o información adicional"
+                    />
+                  </label>
+                </div>
+
+                {errorRapido && (
+                  <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    {errorRapido}
+                  </div>
+                )}
+
+                <footer className="sticky bottom-0 flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-white py-4">
+                  <button
+                    type="button"
+                    onClick={() => setEdicionRapida(null)}
+                    disabled={guardandoRapido}
+                    className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={guardandoRapido}
+                    className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {guardandoRapido ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </footer>
+              </form>
+            </section>
+          </div>
+        )}
 
         <footer className="pb-5 text-center text-xs text-slate-400">Neo Transportaciones · Panel privado</footer>
       </div>
