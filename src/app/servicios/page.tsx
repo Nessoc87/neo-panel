@@ -707,17 +707,6 @@ export default function ServiciosPage() {
               </label>
             </div>
 
-            <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
-              <h3 className="font-bold text-slate-800">Vista previa de importes</h3>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div><p className="text-xs text-slate-500">Subtotal</p><p className="mt-1 font-semibold">{dinero(subtotal)}</p></div>
-                <div><p className="text-xs text-slate-500">IVA</p><p className="mt-1 font-semibold">{dinero(iva)}</p></div>
-                <div><p className="text-xs text-slate-500">Retención</p><p className="mt-1 font-semibold">{retencionAplica ? dinero(retencion) : "No aplica"}</p></div>
-                <div><p className="text-xs text-slate-500">Total estimado</p><p className="mt-1 text-xl font-bold text-cyan-900">{dinero(total)}</p></div>
-              </div>
-              <p className="mt-3 text-xs text-slate-500">Cálculo estimado: subtotal más IVA menos retención.</p>
-            </div>
-
             <div className="flex flex-wrap gap-3">
               <button type="submit" disabled={guardando || cargandoCatalogos || Boolean(errorCatalogos)} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60">
                 {guardando ? "Guardando..." : editandoId ? "Guardar cambios" : "Registrar servicio"}
