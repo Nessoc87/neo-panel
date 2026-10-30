@@ -11,6 +11,7 @@ type ServiceInput = {
   factura?: unknown;
   cantidad?: unknown;
   concepto?: unknown;
+  conceptos_detalle?: unknown;
   costo_unitario?: unknown;
   iva_porcentaje?: unknown;
   retencion_porcentaje?: unknown;
@@ -62,6 +63,57 @@ function optionalDate(value: unknown): string | null | undefined {
   }
 
   return value;
+}
+
+type ConceptoNormalizado = {
+  concepto: string; cantidad: number; costo_unitario: number;
+  iva_porcentaje: number; retencion_porcentaje: number; retencion_aplica: boolean;
+  subtotal: number; iva: number; retencion: number; total: number;
+};
+type ResumenConceptos = {
+  lineas: ConceptoNormalizado[]; concepto: string; subtotal: number;
+  iva: number; retencion: number; iva_porcentaje: number; retencion_porcentaje: number;
+};
+function redondearDinero(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+function normalizarConceptos(raw: unknown, legacy: {
+  concepto: unknown; cantidad: unknown; costo_unitario: unknown;
+  iva_porcentaje: unknown; retencion_porcentaje: unknown;
+}): ResumenConceptos | null {
+  const elementos: unknown[] = Array.isArray(raw) ? raw : [{
+    concepto: legacy.concepto, cantidad: legacy.cantidad, costo_unitario: legacy.costo_unitario,
+    iva_porcentaje: legacy.iva_porcentaje, retencion_porcentaje: legacy.retencion_porcentaje,
+    retencion_aplica: true,
+  }];
+  if (elementos.length<1||elementos.length>50) return null;
+  const lineas: ConceptoNormalizado[]=[];
+  for(const elemento of elementos){
+    if(!elemento||typeof elemento!=="object"||Array.isArray(elemento))return null;
+    const item=elemento as Record<string,unknown>;
+    const concepto=textValue(item.concepto,700);
+    const cantidad=numericValue(item.cantidad,1);
+    const costo=numericValue(item.costo_unitario,0);
+    const ivaPct=numericValue(item.iva_porcentaje,16);
+    const retAplica=item.retencion_aplica!==false;
+    const retPct=retAplica?numericValue(item.retencion_porcentaje,0):0;
+    if(!concepto||cantidad===null||cantidad<=0||costo===null||costo<0||
+      ivaPct===null||ivaPct<0||ivaPct>100||retPct===null||retPct<0||retPct>100)return null;
+    const subtotal=redondearDinero(cantidad*costo);
+    const iva=redondearDinero(subtotal*ivaPct/100);
+    const retencion=retAplica?redondearDinero(subtotal*retPct/100):0;
+    lineas.push({concepto,cantidad,costo_unitario:costo,iva_porcentaje:ivaPct,
+      retencion_porcentaje:retPct,retencion_aplica:retAplica,subtotal,iva,retencion,
+      total:redondearDinero(subtotal+iva-retencion)});
+  }
+  const subtotal=redondearDinero(lineas.reduce((s,l)=>s+l.subtotal,0));
+  const iva=redondearDinero(lineas.reduce((s,l)=>s+l.iva,0));
+  const retencion=redondearDinero(lineas.reduce((s,l)=>s+l.retencion,0));
+  return {
+    lineas,concepto:lineas.map(l=>l.concepto).join(" — "),subtotal,iva,retencion,
+    iva_porcentaje:subtotal>0?Number((iva/subtotal*100).toFixed(10)):0,
+    retencion_porcentaje:subtotal>0?Number((retencion/subtotal*100).toFixed(10)):0,
+  };
 }
 
 async function requireSession() {
@@ -138,14 +190,12 @@ export async function POST(request: NextRequest) {
   const cliente = textValue(body.cliente, 200);
   const facturaSolicitada = textValue(body.factura, 100) || null;
   const motivoCancelacion = textValue(body.motivo_cancelacion, 1000) || null;
-  const concepto = textValue(body.concepto, 1000);
-  const cantidad = numericValue(body.cantidad, 1);
-  const costoUnitario = numericValue(body.costo_unitario, 0);
-  const ivaPorcentaje = numericValue(body.iva_porcentaje, 16);
-  const retencionPorcentaje = numericValue(
-    body.retencion_porcentaje,
-    0
-  );
+  const resumen = normalizarConceptos(body.conceptos_detalle, {
+    concepto: body.concepto, cantidad: body.cantidad, costo_unitario: body.costo_unitario,
+    iva_porcentaje: body.iva_porcentaje, retencion_porcentaje: body.retencion_porcentaje,
+  });
+  if (!cliente) return NextResponse.json({ok:false,message:"Selecciona o escribe el cliente."},{status:400});
+  if (!resumen) return NextResponse.json({ok:false,message:"Revisa los conceptos: agrega entre 1 y 50 partidas con descripción, cantidad, precio e impuestos válidos."},{status:400});
 
   const fechaEntrega = optionalDate(body.fecha_entrega);
   const fechaPago = optionalDate(body.fecha_pago);
@@ -153,34 +203,6 @@ export async function POST(request: NextRequest) {
   if (!cliente) {
     return NextResponse.json(
       { ok: false, message: "Selecciona o escribe el cliente." },
-      { status: 400 }
-    );
-  }
-
-  if (!concepto) {
-    return NextResponse.json(
-      { ok: false, message: "El concepto del servicio es obligatorio." },
-      { status: 400 }
-    );
-  }
-
-  if (
-    cantidad === null ||
-    cantidad <= 0 ||
-    costoUnitario === null ||
-    costoUnitario < 0 ||
-    ivaPorcentaje === null ||
-    ivaPorcentaje < 0 ||
-    ivaPorcentaje > 100 ||
-    retencionPorcentaje === null ||
-    retencionPorcentaje < 0 ||
-    retencionPorcentaje > 100
-  ) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Revisa cantidad, costo unitario, IVA y retención.",
-      },
       { status: 400 }
     );
   }
@@ -233,11 +255,12 @@ export async function POST(request: NextRequest) {
   const record = {
     cliente,
     factura,
-    cantidad,
-    concepto,
-    costo_unitario: costoUnitario,
-    iva_porcentaje: ivaPorcentaje,
-    retencion_porcentaje: retencionPorcentaje,
+    cantidad: 1,
+    concepto: resumen.concepto,
+    costo_unitario: resumen.subtotal,
+    iva_porcentaje: resumen.iva_porcentaje,
+    retencion_porcentaje: resumen.retencion_porcentaje,
+    conceptos_detalle: resumen.lineas,
     observaciones: textValue(body.observaciones) || null,
     estatus: estatus.toUpperCase(),
     paquete: textValue(body.paquete, 200) || null,
@@ -331,47 +354,14 @@ export async function PATCH(request: NextRequest) {
   const cliente = textValue(body.cliente, 200);
   const factura = textValue(body.factura, 100) || null;
   const motivoCancelacion = textValue(body.motivo_cancelacion, 1000) || null;
-
-  const concepto = textValue(body.concepto, 1000);
-
-  const cantidad = numericValue(body.cantidad, 1);
-  const costoUnitario = numericValue(body.costo_unitario, 0);
-  const ivaPorcentaje = numericValue(body.iva_porcentaje, 16);
-  const retencionPorcentaje = numericValue(body.retencion_porcentaje, 0);
+  const resumen = normalizarConceptos(body.conceptos_detalle, {
+    concepto: body.concepto, cantidad: body.cantidad, costo_unitario: body.costo_unitario,
+    iva_porcentaje: body.iva_porcentaje, retencion_porcentaje: body.retencion_porcentaje,
+  });
+  if (!cliente || !resumen) return NextResponse.json({ok:false,message:"El cliente y al menos un concepto válido son obligatorios."},{status:400});
 
   const fechaEntrega = optionalDate(body.fecha_entrega);
   const fechaPago = optionalDate(body.fecha_pago);
-
-  if (!cliente || !concepto) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "El cliente y el concepto son obligatorios.",
-      },
-      { status: 400 }
-    );
-  }
-
-  if (
-    cantidad === null ||
-    cantidad <= 0 ||
-    costoUnitario === null ||
-    costoUnitario < 0 ||
-    ivaPorcentaje === null ||
-    ivaPorcentaje < 0 ||
-    ivaPorcentaje > 100 ||
-    retencionPorcentaje === null ||
-    retencionPorcentaje < 0 ||
-    retencionPorcentaje > 100
-  ) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Revisa cantidad, costo unitario, IVA y retención.",
-      },
-      { status: 400 }
-    );
-  }
 
   if (fechaEntrega === undefined || fechaPago === undefined) {
     return NextResponse.json(
@@ -418,11 +408,12 @@ export async function PATCH(request: NextRequest) {
   const record = {
     cliente,
     factura,
-    cantidad,
-    concepto,
-    costo_unitario: costoUnitario,
-    iva_porcentaje: ivaPorcentaje,
-    retencion_porcentaje: retencionPorcentaje,
+    cantidad: 1,
+    concepto: resumen.concepto,
+    costo_unitario: resumen.subtotal,
+    iva_porcentaje: resumen.iva_porcentaje,
+    retencion_porcentaje: resumen.retencion_porcentaje,
+    conceptos_detalle: resumen.lineas,
     observaciones: textValue(body.observaciones) || null,
     estatus,
     paquete: textValue(body.paquete, 200) || null,

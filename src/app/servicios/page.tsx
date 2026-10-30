@@ -7,6 +7,19 @@ import * as XLSX from "xlsx";
 
 type Estatus = "PENDIENTE" | "FACTURADO" | "PAGADO" | "CANCELADO";
 
+type ConceptoDetalle = {
+  concepto: string;
+  cantidad: number | string;
+  costo_unitario: number | string;
+  iva_porcentaje: number | string;
+  retencion_porcentaje: number | string;
+  retencion_aplica?: boolean;
+  subtotal?: number | string;
+  iva?: number | string;
+  retencion?: number | string;
+  total?: number | string;
+};
+
 type Servicio = {
   id: string;
   cliente: string;
@@ -20,6 +33,7 @@ type Servicio = {
   iva: number | string;
   retencion: number | string;
   total: number | string;
+  conceptos_detalle?: ConceptoDetalle[] | null;
   observaciones: string | null;
   estatus: Estatus;
   paquete: string | null;
@@ -29,6 +43,17 @@ type Servicio = {
   motivo_cancelacion: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type LineaConcepto = {
+  id: string;
+  concepto_base: string;
+  concepto_manual: string;
+  cantidad: string;
+  costo_unitario: string;
+  iva_porcentaje: string;
+  retencion_porcentaje: string;
+  retencion_aplica: boolean;
 };
 
 type ClienteCatalogo = { id: string; nombre: string };
@@ -47,13 +72,7 @@ type ConceptoCatalogo = {
 type Formulario = {
   cliente: string;
   factura: string;
-  cantidad: string;
-  concepto_base: string;
-  concepto_manual: string;
-  subconceptos: string;
-  costo_unitario: string;
-  iva_porcentaje: string;
-  retencion_porcentaje: string;
+  lineas: LineaConcepto[];
   observaciones: string;
   estatus: Estatus;
   paquete: string;
@@ -78,24 +97,21 @@ type RespuestaCatalogos = {
 
 const CONCEPTO_MANUAL = "__CONCEPTO_MANUAL__";
 
-const formularioVacio: Formulario = {
-  cliente: "",
-  factura: "",
-  cantidad: "1",
-  concepto_base: "",
-  concepto_manual: "",
-  subconceptos: "",
-  costo_unitario: "",
-  iva_porcentaje: "16",
-  retencion_porcentaje: "0",
-  observaciones: "",
-  estatus: "PENDIENTE",
-  paquete: "",
-  fecha_entrega: "",
-  fecha_pago: "",
-  comentarios: "",
-  motivo_cancelacion: "",
-};
+function crearLineaVacia(id: string): LineaConcepto {
+  return {
+    id, concepto_base: "", concepto_manual: "", cantidad: "1",
+    costo_unitario: "", iva_porcentaje: "16", retencion_porcentaje: "0",
+    retencion_aplica: true,
+  };
+}
+
+function crearFormularioVacio(): Formulario {
+  return {
+    cliente: "", factura: "", lineas: [crearLineaVacia("linea-inicial")],
+    observaciones: "", estatus: "PENDIENTE", paquete: "",
+    fecha_entrega: "", fecha_pago: "", comentarios: "", motivo_cancelacion: "",
+  };
+}
 
 const estatusOpciones: Estatus[] = ["PENDIENTE", "FACTURADO", "PAGADO", "CANCELADO"];
 
@@ -155,48 +171,64 @@ function claseEstatus(estatus: Estatus): string {
   return clases[estatus] ?? "bg-slate-100 text-slate-700";
 }
 
-function separarDescripcion(servicio: Servicio, conceptos: ConceptoCatalogo[]) {
-  const conceptoCoincidente = [...conceptos]
-    .sort((a, b) => b.nombre.length - a.nombre.length)
-    .find(
-      (concepto) =>
-        servicio.concepto === concepto.nombre ||
-        servicio.concepto.startsWith(`${concepto.nombre} — `)
-    );
-
-  if (!conceptoCoincidente) {
-    return {
-      concepto_base: CONCEPTO_MANUAL,
-      concepto_manual: servicio.concepto,
-      subconceptos: "",
-    };
-  }
-
-  const resto = servicio.concepto.slice(conceptoCoincidente.nombre.length).replace(/^ — /, "");
-  return {
-    concepto_base: conceptoCoincidente.nombre,
-    concepto_manual: "",
-    subconceptos: resto ? resto.split(" — ").join("\n") : "",
-  };
+function redondearDinero(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
 }
 
-function crearDescripcionFinal(formulario: Formulario): string {
-  const principal =
-    formulario.concepto_base === CONCEPTO_MANUAL
-      ? formulario.concepto_manual.trim()
-      : formulario.concepto_base.trim();
-  const adicionales = formulario.subconceptos
-    .split(/\r?\n/)
-    .map((elemento) => elemento.trim())
-    .filter(Boolean);
-  return [principal, ...adicionales].filter(Boolean).join(" — ");
+function nombreLinea(linea: LineaConcepto): string {
+  return linea.concepto_base === CONCEPTO_MANUAL
+    ? linea.concepto_manual.trim()
+    : linea.concepto_base.trim();
+}
+
+function lineasDeServicio(servicio: Servicio, catalogo: ConceptoCatalogo[]): LineaConcepto[] {
+  const guardadas = Array.isArray(servicio.conceptos_detalle) ? servicio.conceptos_detalle : [];
+  // Registros antiguos: reconstruir una sola partida sin alterar cantidades o importes.
+  const origen: ConceptoDetalle[] = guardadas.length ? guardadas : [{
+    concepto: servicio.concepto, cantidad: servicio.cantidad,
+    costo_unitario: servicio.costo_unitario, iva_porcentaje: servicio.iva_porcentaje,
+    retencion_porcentaje: servicio.retencion_porcentaje,
+  }];
+  return origen.map((detalle, index) => {
+    const nombre = String(detalle.concepto ?? "").trim();
+    const catalogado = catalogo.find((item) => item.nombre === nombre);
+    return {
+      id: `linea-guardada-${index}`,
+      concepto_base: catalogado ? catalogado.nombre : CONCEPTO_MANUAL,
+      concepto_manual: catalogado ? "" : nombre,
+      cantidad: String(detalle.cantidad ?? 1),
+      costo_unitario: String(detalle.costo_unitario ?? 0),
+      iva_porcentaje: String(detalle.iva_porcentaje ?? 16),
+      retencion_porcentaje: String(detalle.retencion_porcentaje ?? 0),
+      retencion_aplica: typeof detalle.retencion_aplica === "boolean"
+        ? detalle.retencion_aplica
+        : catalogado?.retencion_aplica ?? true,
+    };
+  });
+}
+
+function cantidadPartidas(servicio: Servicio): number {
+  return Array.isArray(servicio.conceptos_detalle) && servicio.conceptos_detalle.length
+    ? servicio.conceptos_detalle.length
+    : 1;
+}
+
+function descripcionPartidas(servicio: Servicio): string {
+  const items = Array.isArray(servicio.conceptos_detalle) ? servicio.conceptos_detalle : [];
+  if (!items.length) return servicio.concepto;
+  return items.map((linea) => {
+    const subtotal = linea.subtotal !== undefined
+      ? dinero(linea.subtotal)
+      : dinero(numero(linea.cantidad) * numero(linea.costo_unitario));
+    return `${linea.concepto} · ${numero(linea.cantidad).toLocaleString("es-MX")} × ${dinero(linea.costo_unitario)} = ${subtotal}`;
+  }).join("\n");
 }
 
 export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [clientes, setClientes] = useState<ClienteCatalogo[]>([]);
   const [conceptos, setConceptos] = useState<ConceptoCatalogo[]>([]);
-  const [form, setForm] = useState<Formulario>(formularioVacio);
+  const [form, setForm] = useState<Formulario>(crearFormularioVacio);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus>("PENDIENTE");
@@ -282,60 +314,92 @@ export default function ServiciosPage() {
     total: servicios.filter((s) => s.estatus !== "CANCELADO").reduce((suma, s) => suma + numero(s.total), 0),
   }), [servicios]);
 
-  const conceptoSeleccionado = conceptos.find((concepto) => concepto.nombre === form.concepto_base);
-  const retencionAplica = form.concepto_base === CONCEPTO_MANUAL ? true : (conceptoSeleccionado?.retencion_aplica ?? true);
-  const descripcionFinal = crearDescripcionFinal(form);
-  const subtotal = numero(form.cantidad) * numero(form.costo_unitario);
-  const iva = subtotal * numero(form.iva_porcentaje) / 100;
-  const retencion = retencionAplica ? subtotal * numero(form.retencion_porcentaje) / 100 : 0;
-  const total = subtotal + iva - retencion;
+  const resumenConceptos = useMemo(() => {
+    const lineas = form.lineas.map((linea) => {
+      const base = redondearDinero(numero(linea.cantidad) * numero(linea.costo_unitario));
+      const ivaLinea = redondearDinero(base * numero(linea.iva_porcentaje) / 100);
+      const retencionLinea = linea.retencion_aplica
+        ? redondearDinero(base * numero(linea.retencion_porcentaje) / 100)
+        : 0;
+      return {
+        ...linea,
+        concepto: nombreLinea(linea),
+        subtotal: base,
+        iva: ivaLinea,
+        retencion: retencionLinea,
+        total: redondearDinero(base + ivaLinea - retencionLinea),
+      };
+    });
+    return {
+      lineas,
+      subtotal: redondearDinero(lineas.reduce((suma, linea) => suma + linea.subtotal, 0)),
+      iva: redondearDinero(lineas.reduce((suma, linea) => suma + linea.iva, 0)),
+      retencion: redondearDinero(lineas.reduce((suma, linea) => suma + linea.retencion, 0)),
+      total: redondearDinero(lineas.reduce((suma, linea) => suma + linea.total, 0)),
+    };
+  }, [form.lineas]);
+
+  const descripcionFinal = resumenConceptos.lineas.map((linea) => linea.concepto).filter(Boolean).join(" — ");
 
   function cambiar<K extends keyof Formulario>(clave: K, valor: Formulario[K]) {
     setForm((anterior) => ({ ...anterior, [clave]: valor }));
   }
 
-  function seleccionarConcepto(valor: string) {
+  function actualizarLinea(id: string, cambios: Partial<LineaConcepto>) {
+    setForm((actual) => ({
+      ...actual,
+      lineas: actual.lineas.map((linea) => linea.id === id ? { ...linea, ...cambios } : linea),
+    }));
+  }
+
+  function seleccionarConceptoLinea(id: string, valor: string) {
     if (valor === CONCEPTO_MANUAL) {
-      setForm((anterior) => ({
-        ...anterior,
-        concepto_base: CONCEPTO_MANUAL,
-        concepto_manual: "",
-        subconceptos: "",
-        costo_unitario: "",
-        iva_porcentaje: "16",
-        retencion_porcentaje: "0",
-      }));
+      actualizarLinea(id, {
+        concepto_base: CONCEPTO_MANUAL, concepto_manual: "", costo_unitario: "",
+        iva_porcentaje: "16", retencion_porcentaje: "0", retencion_aplica: true,
+      });
       return;
     }
-
     const concepto = conceptos.find((item) => item.nombre === valor);
     if (!concepto) {
-      setForm((anterior) => ({ ...anterior, concepto_base: "", concepto_manual: "", subconceptos: "", costo_unitario: "" }));
+      actualizarLinea(id, {
+        concepto_base: "", concepto_manual: "", costo_unitario: "",
+        iva_porcentaje: "16", retencion_porcentaje: "0", retencion_aplica: true,
+      });
       return;
     }
-
-    setForm((anterior) => ({
-      ...anterior,
+    actualizarLinea(id, {
       concepto_base: concepto.nombre,
       concepto_manual: "",
-      subconceptos: "",
-      costo_unitario: concepto.precio_manual || concepto.precio_unitario === null ? "" : String(concepto.precio_unitario),
+      costo_unitario: concepto.precio_manual || concepto.precio_unitario === null
+        ? "" : String(concepto.precio_unitario),
       iva_porcentaje: String(concepto.iva_porcentaje),
       retencion_porcentaje: concepto.retencion_aplica ? String(concepto.retencion_porcentaje) : "0",
+      retencion_aplica: concepto.retencion_aplica,
+    });
+  }
+
+  function agregarLinea() {
+    if (form.lineas.length >= 50) return;
+    setForm((actual) => ({
+      ...actual,
+      lineas: [...actual.lineas, crearLineaVacia(`linea-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)],
+    }));
+  }
+
+  function eliminarLinea(id: string) {
+    setForm((actual) => ({
+      ...actual,
+      lineas: actual.lineas.length <= 1 ? actual.lineas : actual.lineas.filter((linea) => linea.id !== id),
     }));
   }
 
   function editar(servicio: Servicio) {
-    const separado = separarDescripcion(servicio, conceptos);
     setEditandoId(servicio.id);
     setForm({
       cliente: servicio.cliente ?? "",
       factura: servicio.factura ?? "",
-      cantidad: String(servicio.cantidad ?? 1),
-      ...separado,
-      costo_unitario: String(servicio.costo_unitario ?? 0),
-      iva_porcentaje: String(servicio.iva_porcentaje ?? 16),
-      retencion_porcentaje: String(servicio.retencion_porcentaje ?? 0),
+      lineas: lineasDeServicio(servicio, conceptos),
       observaciones: servicio.observaciones ?? "",
       estatus: servicio.estatus ?? "PENDIENTE",
       paquete: servicio.paquete ?? "",
@@ -351,7 +415,7 @@ export default function ServiciosPage() {
 
   function cancelarEdicion() {
     setEditandoId(null);
-    setForm(formularioVacio);
+    setForm(crearFormularioVacio());
     setError("");
     setMensaje("");
   }
@@ -362,19 +426,27 @@ export default function ServiciosPage() {
     setError("");
     setMensaje("");
 
-    const conceptoFinal = crearDescripcionFinal(form);
     if (!form.cliente.trim()) {
       setError("Selecciona un cliente del catálogo.");
       setGuardando(false);
       return;
     }
-    if (!conceptoFinal) {
-      setError("Selecciona un concepto y agrega su descripción.");
+    if (form.lineas.length < 1 || form.lineas.length > 50) {
+      setError("Agrega entre 1 y 50 conceptos al servicio.");
       setGuardando(false);
       return;
     }
-    if (!form.costo_unitario || !Number.isFinite(Number(form.costo_unitario))) {
-      setError("Captura el costo unitario del servicio.");
+
+    const invalido = resumenConceptos.lineas.find((linea) =>
+      !linea.concepto ||
+      !Number.isFinite(numero(linea.cantidad)) || numero(linea.cantidad) <= 0 ||
+      linea.costo_unitario.trim() === "" ||
+      !Number.isFinite(numero(linea.costo_unitario)) || numero(linea.costo_unitario) < 0 ||
+      !Number.isFinite(numero(linea.iva_porcentaje)) || numero(linea.iva_porcentaje) < 0 || numero(linea.iva_porcentaje) > 100 ||
+      !Number.isFinite(numero(linea.retencion_porcentaje)) || numero(linea.retencion_porcentaje) < 0 || numero(linea.retencion_porcentaje) > 100
+    );
+    if (invalido) {
+      setError("Revisa cada concepto: descripción, cantidad, precio, IVA y retención deben tener valores válidos.");
       setGuardando(false);
       return;
     }
@@ -395,15 +467,27 @@ export default function ServiciosPage() {
     }
 
     try {
+      const conceptosDetalle = resumenConceptos.lineas.map((linea) => ({
+        concepto: linea.concepto,
+        cantidad: Number(linea.cantidad),
+        costo_unitario: Number(linea.costo_unitario),
+        iva_porcentaje: Number(linea.iva_porcentaje),
+        retencion_porcentaje: linea.retencion_aplica ? Number(linea.retencion_porcentaje) : 0,
+        retencion_aplica: linea.retencion_aplica,
+      }));
       const body = {
         ...(editandoId ? { id: editandoId } : {}),
         cliente: form.cliente,
         factura: form.factura,
-        cantidad: Number(form.cantidad),
-        concepto: conceptoFinal,
-        costo_unitario: Number(form.costo_unitario),
-        iva_porcentaje: Number(form.iva_porcentaje),
-        retencion_porcentaje: retencionAplica ? Number(form.retencion_porcentaje) : 0,
+        concepto: descripcionFinal,
+        conceptos_detalle: conceptosDetalle,
+        // Compatibilidad con los campos históricos del servicio.
+        cantidad: 1,
+        costo_unitario: resumenConceptos.subtotal,
+        iva_porcentaje: resumenConceptos.subtotal > 0
+          ? Number((resumenConceptos.iva / resumenConceptos.subtotal * 100).toFixed(10)) : 0,
+        retencion_porcentaje: resumenConceptos.subtotal > 0
+          ? Number((resumenConceptos.retencion / resumenConceptos.subtotal * 100).toFixed(10)) : 0,
         observaciones: form.observaciones,
         estatus: form.estatus,
         paquete: form.paquete,
@@ -422,15 +506,12 @@ export default function ServiciosPage() {
         window.location.assign("/login");
         return;
       }
-      if (!res.ok || !json.ok) {
-        throw new Error(json.message || "No fue posible guardar el servicio.");
-      }
+      if (!res.ok || !json.ok) throw new Error(json.message || "No fue posible guardar el servicio.");
       const texto = editandoId ? "Servicio actualizado correctamente." : "Servicio registrado correctamente.";
-      const estatusGuardado = form.estatus;
-      setFiltroEstatus(estatusGuardado);
+      setFiltroEstatus(form.estatus);
       setCantidadVisible(5);
       setEditandoId(null);
-      setForm(formularioVacio);
+      setForm(crearFormularioVacio());
       await cargarServicios();
       setMensaje(texto);
     } catch (e) {
@@ -444,9 +525,8 @@ export default function ServiciosPage() {
     const filas = filtrados.map((s) => ({
       Cliente: s.cliente,
       Factura: s.factura ?? "",
-      Cantidad: numero(s.cantidad),
-      Concepto: s.concepto,
-      "Costo unitario": numero(s.costo_unitario),
+      Partidas: cantidadPartidas(s),
+      Conceptos: descripcionPartidas(s),
       Subtotal: numero(s.subtotal),
       IVA: numero(s.iva),
       Retención: numero(s.retencion),
@@ -462,10 +542,9 @@ export default function ServiciosPage() {
     }));
     const hoja = XLSX.utils.json_to_sheet(filas);
     hoja["!cols"] = [
-      { wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 45 }, { wch: 17 },
-      { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 16 },
-      { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 35 }, { wch: 35 },
-      { wch: 22 },
+      { wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 70 }, { wch: 17 },
+      { wch: 17 }, { wch: 17 }, { wch: 16 }, { wch: 20 }, { wch: 18 },
+      { wch: 18 }, { wch: 35 }, { wch: 35 }, { wch: 22 }, { wch: 18 },
     ];
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, "Servicios");
@@ -494,7 +573,7 @@ export default function ServiciosPage() {
           <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">ADMINISTRACIÓN</p>
           <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Servicios</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
-            Selecciona clientes y conceptos del catálogo; el precio, IVA y retención se precargan automáticamente. Puedes agregar subconceptos manuales a cualquier concepto.
+            Registra un servicio con uno o varios conceptos. Cada partida conserva su propia cantidad, precio, IVA y retención; la app suma los importes automáticamente.
           </p>
         </section>
 
@@ -521,7 +600,7 @@ export default function ServiciosPage() {
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold">{editandoId ? "Editar servicio" : "Registrar servicio"}</h2>
-              <p className="mt-1 text-sm text-slate-500">Selecciona un cliente y un concepto. Los subconceptos son opcionales.</p>
+              <p className="mt-1 text-sm text-slate-500">Selecciona un cliente y agrega todas las partidas que forman parte del servicio.</p>
             </div>
             {editandoId && <button type="button" onClick={cancelarEdicion} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-slate-50">Cancelar edición</button>}
           </div>
@@ -529,72 +608,95 @@ export default function ServiciosPage() {
           <form onSubmit={guardar} className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <label className={claseEtiqueta}>Cliente *
-                <select className={claseCampo} value={form.cliente} onChange={(e) => cambiar("cliente", e.target.value)} required disabled={cargandoCatalogos || clientes.length === 0}>
-                  <option value="">{cargandoCatalogos ? "Cargando clientes..." : "Selecciona un cliente"}</option>
-                  {clientes.map((cliente) => <option key={cliente.id} value={cliente.nombre}>{cliente.nombre}</option>)}
+                <select className={claseCampo} value={form.cliente} onChange={(e)=>cambiar("cliente",e.target.value)} required disabled={cargandoCatalogos||clientes.length===0}>
+                  <option value="">{cargandoCatalogos?"Cargando clientes...":"Selecciona un cliente"}</option>
+                  {clientes.map((cliente)=><option key={cliente.id} value={cliente.nombre}>{cliente.nombre}</option>)}
                 </select>
               </label>
-              <label className={claseEtiqueta}>Número de factura{form.estatus === "FACTURADO" ? " *" : ""}
-                {form.estatus === "FACTURADO" ? (
-                  <input className={claseCampo} value={form.factura} onChange={(e) => cambiar("factura", e.target.value)} placeholder="Captura el número de factura" maxLength={100} required />
-                ) : (
-                  <input className={claseCampo} value={editandoId ? (form.factura || "Sin número asignado") : "Se asigna al guardar"} readOnly aria-readonly="true" />
-                )}
-                <span className="mt-1 block text-xs font-normal text-slate-500">{form.estatus === "FACTURADO" ? "Confirma el número consecutivo o captura el folio que corresponda. Es obligatorio para facturar." : editandoId ? "El número consecutivo existente se conserva al editar." : "El sistema asignará el siguiente número consecutivo al registrar el servicio."}</span>
+              <label className={claseEtiqueta}>Número de factura{form.estatus==="FACTURADO"?" *":""}
+                {form.estatus==="FACTURADO"
+                  ? <input className={claseCampo} value={form.factura} onChange={(e)=>cambiar("factura",e.target.value)} placeholder="Captura el número de factura" maxLength={100} required/>
+                  : <input className={claseCampo} value={editandoId?(form.factura||"Sin número asignado"):"Se asigna al guardar"} readOnly aria-readonly="true"/>}
+                <span className="mt-1 block text-xs font-normal text-slate-500">{form.estatus==="FACTURADO"?"Confirma el número consecutivo o captura el folio que corresponda.":editandoId?"El número consecutivo existente se conserva al editar.":"El sistema asignará el siguiente número consecutivo al registrar el servicio."}</span>
               </label>
               <label className={claseEtiqueta}>Paquete o referencia
-                <input className={claseCampo} value={form.paquete} onChange={(e) => cambiar("paquete", e.target.value)} placeholder="Nombre o referencia" maxLength={200} />
-              </label>
-              <label className={claseEtiqueta}>Concepto principal *
-                <select className={claseCampo} value={form.concepto_base} onChange={(e) => seleccionarConcepto(e.target.value)} required disabled={cargandoCatalogos || conceptos.length === 0}>
-                  <option value="">{cargandoCatalogos ? "Cargando conceptos..." : "Selecciona un concepto"}</option>
-                  {conceptos.map((concepto) => <option key={concepto.id} value={concepto.nombre}>{concepto.nombre}</option>)}
-                  <option value={CONCEPTO_MANUAL}>Otro concepto (manual)</option>
-                </select>
-              </label>
-              {form.concepto_base === CONCEPTO_MANUAL && <label className={claseEtiqueta}>Nombre del concepto manual *
-                <input className={claseCampo} value={form.concepto_manual} onChange={(e) => cambiar("concepto_manual", e.target.value)} placeholder="Escribe el concepto" maxLength={700} required />
-              </label>}
-              <label className={claseEtiqueta}>Subconceptos adicionales (opcional)
-                <textarea className={claseCampo} value={form.subconceptos} onChange={(e) => cambiar("subconceptos", e.target.value)} rows={3} placeholder={"Uno por línea. Ejemplo:\nCarga adicional\nTiempo de espera"} />
-                <span className="mt-1 block text-xs font-normal text-slate-500">Puedes escribir varios, uno por línea. Se unirán al concepto principal en la descripción guardada.</span>
-              </label>
-              <label className={claseEtiqueta}>Cantidad *
-                <input className={claseCampo} type="number" value={form.cantidad} onChange={(e) => cambiar("cantidad", e.target.value)} min="0.01" step="any" required />
-              </label>
-              <label className={claseEtiqueta}>Costo unitario (MXN) *
-                <input className={claseCampo} type="number" value={form.costo_unitario} onChange={(e) => cambiar("costo_unitario", e.target.value)} min="0" step="0.01" required placeholder="Se completa según el concepto" />
-                {conceptoSeleccionado?.precio_manual && <span className="mt-1 block text-xs font-normal text-amber-700">Este concepto requiere capturar el precio manualmente.</span>}
-              </label>
-              <label className={claseEtiqueta}>IVA (%)
-                <input className={claseCampo} type="number" value={form.iva_porcentaje} onChange={(e) => cambiar("iva_porcentaje", e.target.value)} min="0" max="100" step="0.01" required />
-              </label>
-              <label className={claseEtiqueta}>{retencionAplica ? "Retención (%)" : "Retención (no aplica)"}
-                <input className={claseCampo} type="number" value={form.retencion_porcentaje} onChange={(e) => cambiar("retencion_porcentaje", e.target.value)} min="0" max="100" step="0.01" required disabled={!retencionAplica} />
+                <input className={claseCampo} value={form.paquete} onChange={(e)=>cambiar("paquete",e.target.value)} placeholder="Nombre o referencia" maxLength={200}/>
               </label>
               <label className={claseEtiqueta}>Estatus
-                <select className={claseCampo} value={form.estatus} onChange={(e) => cambiar("estatus", e.target.value as Estatus)}>
-                  {estatusOpciones.map((opcion) => <option key={opcion} value={opcion}>{textoEstatus(opcion)}</option>)}
-                </select>
+                <select className={claseCampo} value={form.estatus} onChange={(e)=>cambiar("estatus",e.target.value as Estatus)}>{estatusOpciones.map((opcion)=><option key={opcion} value={opcion}>{textoEstatus(opcion)}</option>)}</select>
               </label>
               <label className={claseEtiqueta}>Fecha de entrega
-                <input className={claseCampo} type="date" value={form.fecha_entrega} onChange={(e) => cambiar("fecha_entrega", e.target.value)} />
+                <input className={claseCampo} type="date" value={form.fecha_entrega} onChange={(e)=>cambiar("fecha_entrega",e.target.value)}/>
               </label>
-              {(form.estatus === "PAGADO" || Boolean(form.fecha_pago)) && <label className={claseEtiqueta}>Fecha de pago{form.estatus === "PAGADO" ? " *" : ""}
-                <input className={claseCampo} type="date" value={form.fecha_pago} onChange={(e) => cambiar("fecha_pago", e.target.value)} required={form.estatus === "PAGADO"} />
-                {form.estatus === "PAGADO" && <span className="mt-1 block text-xs font-normal text-cyan-800">La fecha de pago es obligatoria para guardar este estatus.</span>}
+              {(form.estatus==="PAGADO"||Boolean(form.fecha_pago))&&<label className={claseEtiqueta}>Fecha de pago{form.estatus==="PAGADO"?" *":""}
+                <input className={claseCampo} type="date" value={form.fecha_pago} onChange={(e)=>cambiar("fecha_pago",e.target.value)} required={form.estatus==="PAGADO"}/>
+                {form.estatus==="PAGADO"&&<span className="mt-1 block text-xs font-normal text-cyan-800">La fecha de pago es obligatoria para guardar este estatus.</span>}
               </label>}
-              {form.estatus === "CANCELADO" && <label className={`${claseEtiqueta} sm:col-span-2 lg:col-span-3`}>Motivo de cancelación *
-                <textarea className={claseCampo} value={form.motivo_cancelacion} onChange={(e) => cambiar("motivo_cancelacion", e.target.value)} rows={3} placeholder="Explica por qué se cancela este servicio" maxLength={1000} required />
+              {form.estatus==="CANCELADO"&&<label className={`${claseEtiqueta} sm:col-span-2 lg:col-span-3`}>Motivo de cancelación *
+                <textarea className={claseCampo} value={form.motivo_cancelacion} onChange={(e)=>cambiar("motivo_cancelacion",e.target.value)} rows={3} placeholder="Explica por qué se cancela este servicio" maxLength={1000} required/>
                 <span className="mt-1 block text-xs font-normal text-rose-700">Debes registrar el motivo para poder cancelar el servicio.</span>
               </label>}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Descripción final del concepto</p>
-              <p className="mt-2 break-words font-semibold text-slate-800">{descripcionFinal || "Selecciona un concepto para ver la descripción final."}</p>
-              <p className="mt-1 text-xs text-slate-500">Esta descripción unida se guardará en el registro y aparecerá en la tabla y en Excel.</p>
-            </div>
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><h3 className="font-bold text-slate-900">Conceptos del servicio</h3><p className="mt-1 text-sm text-slate-500">Agrega una o varias partidas. Cada una tiene su propia cantidad, precio e impuestos.</p></div>
+                <button type="button" onClick={agregarLinea} disabled={form.lineas.length>=50||guardando} className="rounded-xl bg-cyan-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-50">+ Agregar concepto</button>
+              </div>
+              {form.lineas.map((linea,index)=>{
+                const calculo=resumenConceptos.lineas[index];
+                const conceptoCatalogo=conceptos.find((item)=>item.nombre===linea.concepto_base);
+                return <article key={linea.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-cyan-50 text-sm font-bold text-cyan-800">{index+1}</span><div><p className="text-sm font-bold text-slate-900">Partida {index+1}</p><p className="text-xs text-slate-500">{linea.concepto_base&&linea.concepto_base!==CONCEPTO_MANUAL?linea.concepto_base:linea.concepto_base===CONCEPTO_MANUAL?"Concepto personalizado":"Selecciona un concepto"}</p></div></div>
+                    <button type="button" onClick={()=>eliminarLinea(linea.id)} disabled={form.lineas.length<=1||guardando} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Quitar partida</button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <label className={claseEtiqueta}>Concepto *
+                      <select className={claseCampo} value={linea.concepto_base} onChange={(e)=>seleccionarConceptoLinea(linea.id,e.target.value)} required disabled={cargandoCatalogos||conceptos.length===0}>
+                        <option value="">Selecciona un concepto</option>
+                        {conceptos.map((concepto)=><option key={concepto.id} value={concepto.nombre}>{concepto.nombre}</option>)}
+                        <option value={CONCEPTO_MANUAL}>Otro concepto (manual)</option>
+                      </select>
+                    </label>
+                    {linea.concepto_base===CONCEPTO_MANUAL&&<label className={claseEtiqueta}>Descripción del concepto *
+                      <input className={claseCampo} value={linea.concepto_manual} onChange={(e)=>actualizarLinea(linea.id,{concepto_manual:e.target.value})} placeholder="Describe el servicio o concepto" maxLength={700} required/>
+                    </label>}
+                    <label className={claseEtiqueta}>Cantidad *
+                      <input className={claseCampo} type="number" value={linea.cantidad} onChange={(e)=>actualizarLinea(linea.id,{cantidad:e.target.value})} min="0.01" step="any" required/>
+                    </label>
+                    <label className={claseEtiqueta}>Precio unitario (MXN) *
+                      <input className={claseCampo} type="number" value={linea.costo_unitario} onChange={(e)=>actualizarLinea(linea.id,{costo_unitario:e.target.value})} min="0" step="0.01" required placeholder="Precio de esta partida"/>
+                      {conceptoCatalogo?.precio_manual&&<span className="mt-1 block text-xs font-normal text-amber-700">Este concepto requiere capturar el precio manualmente.</span>}
+                    </label>
+                    <label className={claseEtiqueta}>IVA (%)
+                      <input className={claseCampo} type="number" value={linea.iva_porcentaje} onChange={(e)=>actualizarLinea(linea.id,{iva_porcentaje:e.target.value})} min="0" max="100" step="0.01" required/>
+                    </label>
+                    <label className={claseEtiqueta}>{linea.retencion_aplica?"Retención (%)":"Retención (no aplica)"}
+                      <input className={claseCampo} type="number" value={linea.retencion_porcentaje} onChange={(e)=>actualizarLinea(linea.id,{retencion_porcentaje:e.target.value})} min="0" max="100" step="0.01" required disabled={!linea.retencion_aplica}/>
+                    </label>
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-4">
+                    <div><p className="text-xs text-slate-500">Subtotal</p><p className="mt-1 text-sm font-semibold">{dinero(calculo?.subtotal??0)}</p></div>
+                    <div><p className="text-xs text-slate-500">IVA</p><p className="mt-1 text-sm font-semibold">{dinero(calculo?.iva??0)}</p></div>
+                    <div><p className="text-xs text-slate-500">Retención</p><p className="mt-1 text-sm font-semibold">{linea.retencion_aplica?dinero(calculo?.retencion??0):"No aplica"}</p></div>
+                    <div><p className="text-xs text-slate-500">Total de partida</p><p className="mt-1 text-sm font-bold text-cyan-900">{dinero(calculo?.total??0)}</p></div>
+                  </div>
+                </article>;
+              })}
+              <p className="text-xs text-slate-500">Puedes agregar hasta 50 conceptos en un mismo servicio. Los servicios anteriores se conservan y se abren como una sola partida.</p>
+            </section>
+
+            <section className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
+              <h3 className="font-bold text-slate-800">Resumen de importes del servicio</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div><p className="text-xs text-slate-500">Subtotal</p><p className="mt-1 font-semibold">{dinero(resumenConceptos.subtotal)}</p></div>
+                <div><p className="text-xs text-slate-500">IVA</p><p className="mt-1 font-semibold">{dinero(resumenConceptos.iva)}</p></div>
+                <div><p className="text-xs text-slate-500">Retención</p><p className="mt-1 font-semibold">{dinero(resumenConceptos.retencion)}</p></div>
+                <div><p className="text-xs text-slate-500">Total del servicio</p><p className="mt-1 text-xl font-bold text-cyan-900">{dinero(resumenConceptos.total)}</p></div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">El total se calcula sumando cada partida con sus propios impuestos y retenciones.</p>
+            </section>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={claseEtiqueta}>Observaciones
@@ -662,22 +764,28 @@ export default function ServiciosPage() {
           <p className="mt-4 text-sm text-slate-500">Mostrando {visibles.length} de {filtrados.length} servicio(s) en la lista de {textoEstatus(filtroEstatus).toLowerCase()}.</p>
 
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-            <table className="min-w-[1450px] w-full border-collapse text-left text-sm">
+            <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-900 text-white"><tr>
-                <th className="px-4 py-3">Cliente / factura</th><th className="px-4 py-3">Concepto</th><th className="px-4 py-3 text-right">Cantidad</th><th className="px-4 py-3 text-right">Costo unitario</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
+                <th className="px-4 py-3">Cliente / factura</th><th className="px-4 py-3">Conceptos y partidas</th><th className="px-4 py-3 text-right">Partidas</th><th className="px-4 py-3 text-right">Subtotal</th><th className="px-4 py-3 text-right">IVA</th><th className="px-4 py-3 text-right">Retención</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Entrega / antigüedad</th><th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estatus</th><th className="px-4 py-3">Detalles</th><th className="px-4 py-3">Acciones</th>
               </tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {cargando ? (
-                  <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-500">Cargando servicios...</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-12 text-center text-slate-500">Cargando servicios...</td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={13} className="px-4 py-12 text-center text-slate-500">{servicios.length === 0 ? "Todavía no hay servicios registrados." : busqueda.trim() ? "No hay servicios que coincidan con la búsqueda." : `No hay servicios con estatus ${textoEstatus(filtroEstatus).toLowerCase()}.`}</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-12 text-center text-slate-500">{servicios.length === 0 ? "Todavía no hay servicios registrados." : busqueda.trim() ? "No hay servicios que coincidan con la búsqueda." : `No hay servicios con estatus ${textoEstatus(filtroEstatus).toLowerCase()}.`}</td></tr>
                 ) : visibles.map((s) => (
                   <tr key={s.id} className="align-top hover:bg-slate-50">
                     <td className="px-4 py-4"><p className="font-bold text-slate-900">{s.cliente}</p><p className="mt-1 text-xs text-slate-500">Factura: {s.factura || "Sin factura"}</p>{s.paquete && <p className="mt-1 text-xs text-slate-500">Ref.: {s.paquete}</p>}</td>
-                    <td className="max-w-xs whitespace-pre-wrap px-4 py-4">{s.concepto}</td>
-                    <td className="px-4 py-4 text-right">{numero(s.cantidad).toLocaleString("es-MX")}</td>
-                    <td className="px-4 py-4 text-right">{dinero(s.costo_unitario)}</td>
-                    <td className="px-4 py-4 text-right">{dinero(s.subtotal)}</td>
+                    <td className="max-w-sm px-4 py-4">
+                      <p className="whitespace-pre-wrap font-semibold text-slate-800">{s.concepto}</p>
+                      {Array.isArray(s.conceptos_detalle) && s.conceptos_detalle.length>0 && <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                        {s.conceptos_detalle.map((linea,indice)=><p key={`${s.id}-${indice}`} className="text-xs leading-5 text-slate-500">
+                          {linea.concepto}: {numero(linea.cantidad).toLocaleString("es-MX")} × {dinero(linea.costo_unitario)} = <strong className="text-slate-700">{dinero(linea.subtotal??numero(linea.cantidad)*numero(linea.costo_unitario))}</strong>
+                        </p>)}
+                      </div>}
+                    </td>
+                    <td className="px-4 py-4 text-right">{cantidadPartidas(s)}</td>
+                    <td className="px-4 py-4 text-right font-semibold">{dinero(s.subtotal)}</td>
                     <td className="px-4 py-4 text-right">{dinero(s.iva)}</td>
                     <td className="px-4 py-4 text-right">{dinero(s.retencion)}</td>
                     <td className="px-4 py-4 text-right font-bold">{dinero(s.total)}</td>
