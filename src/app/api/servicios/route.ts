@@ -66,9 +66,17 @@ function optionalDate(value: unknown): string | null | undefined {
 }
 
 type ConceptoNormalizado = {
-  concepto: string; cantidad: number; costo_unitario: number;
-  iva_porcentaje: number; retencion_porcentaje: number; retencion_aplica: boolean;
-  subtotal: number; iva: number; retencion: number; total: number;
+  concepto: string;
+  subconceptos: string[];
+  cantidad: number;
+  costo_unitario: number;
+  iva_porcentaje: number;
+  retencion_porcentaje: number;
+  retencion_aplica: boolean;
+  subtotal: number;
+  iva: number;
+  retencion: number;
+  total: number;
 };
 type ResumenConceptos = {
   lineas: ConceptoNormalizado[]; concepto: string; subtotal: number;
@@ -86,33 +94,69 @@ function normalizarConceptos(raw: unknown, legacy: {
     iva_porcentaje: legacy.iva_porcentaje, retencion_porcentaje: legacy.retencion_porcentaje,
     retencion_aplica: true,
   }];
-  if (elementos.length<1||elementos.length>50) return null;
-  const lineas: ConceptoNormalizado[]=[];
-  for(const elemento of elementos){
-    if(!elemento||typeof elemento!=="object"||Array.isArray(elemento))return null;
-    const item=elemento as Record<string,unknown>;
-    const concepto=textValue(item.concepto,700);
-    const cantidad=numericValue(item.cantidad,1);
-    const costo=numericValue(item.costo_unitario,0);
-    const ivaPct=numericValue(item.iva_porcentaje,16);
-    const retAplica=item.retencion_aplica!==false;
-    const retPct=retAplica?numericValue(item.retencion_porcentaje,0):0;
-    if(!concepto||cantidad===null||cantidad<=0||costo===null||costo<0||
-      ivaPct===null||ivaPct<0||ivaPct>100||retPct===null||retPct<0||retPct>100)return null;
-    const subtotal=redondearDinero(cantidad*costo);
-    const iva=redondearDinero(subtotal*ivaPct/100);
-    const retencion=retAplica?redondearDinero(subtotal*retPct/100):0;
-    lineas.push({concepto,cantidad,costo_unitario:costo,iva_porcentaje:ivaPct,
-      retencion_porcentaje:retPct,retencion_aplica:retAplica,subtotal,iva,retencion,
-      total:redondearDinero(subtotal+iva-retencion)});
+  if (elementos.length < 1 || elementos.length > 50) return null;
+
+  const lineas: ConceptoNormalizado[] = [];
+  for (const elemento of elementos) {
+    if (!elemento || typeof elemento !== "object" || Array.isArray(elemento)) return null;
+    const item = elemento as Record<string, unknown>;
+    const concepto = textValue(item.concepto, 700);
+    const cantidad = numericValue(item.cantidad, 1);
+    const costo = numericValue(item.costo_unitario, 0);
+    const ivaPct = numericValue(item.iva_porcentaje, 16);
+    const retAplica = item.retencion_aplica !== false;
+    const retPct = retAplica ? numericValue(item.retencion_porcentaje, 0) : 0;
+
+    let subconceptosRaw: unknown[] = [];
+    if (Array.isArray(item.subconceptos)) {
+      subconceptosRaw = item.subconceptos;
+    } else if (typeof item.subconceptos === "string") {
+      subconceptosRaw = item.subconceptos.split(/\r?\n/);
+    } else if (item.subconceptos !== undefined && item.subconceptos !== null) {
+      return null;
+    }
+    if (subconceptosRaw.length > 30) return null;
+    const subconceptos = subconceptosRaw
+      .map((subconcepto) => typeof subconcepto === "string" ? textValue(subconcepto, 300) : "")
+      .filter(Boolean);
+
+    if (!concepto || cantidad === null || cantidad <= 0 || costo === null || costo < 0 ||
+      ivaPct === null || ivaPct < 0 || ivaPct > 100 ||
+      retPct === null || retPct < 0 || retPct > 100) return null;
+
+    const subtotal = redondearDinero(cantidad * costo);
+    const iva = redondearDinero(subtotal * ivaPct / 100);
+    const retencion = retAplica ? redondearDinero(subtotal * retPct / 100) : 0;
+
+    lineas.push({
+      concepto,
+      subconceptos,
+      cantidad,
+      costo_unitario: costo,
+      iva_porcentaje: ivaPct,
+      retencion_porcentaje: retPct,
+      retencion_aplica: retAplica,
+      subtotal,
+      iva,
+      retencion,
+      total: redondearDinero(subtotal + iva - retencion),
+    });
   }
-  const subtotal=redondearDinero(lineas.reduce((s,l)=>s+l.subtotal,0));
-  const iva=redondearDinero(lineas.reduce((s,l)=>s+l.iva,0));
-  const retencion=redondearDinero(lineas.reduce((s,l)=>s+l.retencion,0));
+
+  const subtotal = redondearDinero(lineas.reduce((s, l) => s + l.subtotal, 0));
+  const iva = redondearDinero(lineas.reduce((s, l) => s + l.iva, 0));
+  const retencion = redondearDinero(lineas.reduce((s, l) => s + l.retencion, 0));
+
   return {
-    lineas,concepto:lineas.map(l=>l.concepto).join(" — "),subtotal,iva,retencion,
-    iva_porcentaje:subtotal>0?Number((iva/subtotal*100).toFixed(10)):0,
-    retencion_porcentaje:subtotal>0?Number((retencion/subtotal*100).toFixed(10)):0,
+    lineas,
+    concepto: lineas
+      .map((linea) => [linea.concepto, ...linea.subconceptos].join(" — "))
+      .join(" — "),
+    subtotal,
+    iva,
+    retencion,
+    iva_porcentaje: subtotal > 0 ? Number((iva / subtotal * 100).toFixed(10)) : 0,
+    retencion_porcentaje: subtotal > 0 ? Number((retencion / subtotal * 100).toFixed(10)) : 0,
   };
 }
 
