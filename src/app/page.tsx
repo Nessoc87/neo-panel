@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export const dynamic = "force-dynamic";
 export const instant = false;
 
 type QuoteRow = {
