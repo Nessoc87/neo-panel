@@ -114,9 +114,10 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   doc.setFillColor(...navy);
   doc.rect(0, 0, pageWidth, 2.2, "F");
 
+  // Cada logotipo conserva su proporción original dentro del mismo recuadro.
   const logoX = pageWidth - margin - 45;
-  const logoWidth = 45;
-  const logoHeight = 17;
+  const logoBoxWidth = 45;
+  const logoBoxHeight = 17;
   const leftAreaWidth = logoX - margin - 5;
   const titleCenterX = margin + leftAreaWidth / 2;
 
@@ -132,8 +133,18 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   const insertarLogo = (data: string | null, x: number, y: number, texto: string, color: [number, number, number]) => {
     if (data) {
       try {
-        doc.addImage(data, "JPEG", x, y, logoWidth, logoHeight);
-        return;
+        const dimensions = doc.getImageProperties(data);
+        const width = Number(dimensions.width);
+        const height = Number(dimensions.height);
+        if (width > 0 && height > 0) {
+          const scale = Math.min(logoBoxWidth / width, logoBoxHeight / height);
+          const drawWidth = width * scale;
+          const drawHeight = height * scale;
+          const drawX = x + (logoBoxWidth - drawWidth) / 2;
+          const drawY = y + (logoBoxHeight - drawHeight) / 2;
+          doc.addImage(data, "JPEG", drawX, drawY, drawWidth, drawHeight);
+          return;
+        }
       } catch (error) {
         console.warn("No se pudo insertar el logotipo " + texto + "; se usará texto.", error);
       }
@@ -141,7 +152,7 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
     doc.setTextColor(...color);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text(texto, x + logoWidth / 2, y + 10, { align: "center" });
+    doc.text(texto, x + logoBoxWidth / 2, y + 10, { align: "center" });
   };
   insertarLogo(capsLogo, logoX, 6, "CAPS", blue);
   insertarLogo(neoLogo, logoX, 25, "NEO", navy);
@@ -228,14 +239,17 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
       textColor: navy, lineColor: border, lineWidth: 0.12,
       overflow: "linebreak", valign: "middle",
     },
-    headStyles: { fillColor: navy, textColor: 255, fontStyle: "bold", fontSize: 6.1, cellPadding: 2.2 },
+    headStyles: {
+      fillColor: navy, textColor: 255, fontStyle: "bold",
+      fontSize: 6.1, cellPadding: 2.2, halign: "center",
+    },
     alternateRowStyles: { fillColor: lightBlue },
     columnStyles: {
-      0: { cellWidth: 78 },
+      0: { cellWidth: 78, halign: "left" },
       1: { cellWidth: 16, halign: "center" },
-      2: { cellWidth: 31, halign: "right" },
-      3: { cellWidth: 29, halign: "right" },
-      4: { cellWidth: 30, halign: "right", fontStyle: "bold" },
+      2: { cellWidth: 31, halign: "center" },
+      3: { cellWidth: 29, halign: "center" },
+      4: { cellWidth: 30, halign: "center", fontStyle: "bold" },
     },
   });
 
@@ -249,17 +263,19 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
       ["Retención", "- " + dinero(retencion)],
       ["TOTAL DE LA COTIZACIÓN", dinero(total)],
     ],
-    theme: "plain",
+    // La tabla de totales conserva dos columnas y su divisor vertical en todas las filas.
+    theme: "grid",
     pageBreak: "avoid",
     tableWidth: 82,
     margin: { left: pageWidth - margin - 82, right: margin, bottom: 17 },
     styles: {
       font: "helvetica", fontSize: 7.8, cellPadding: 1.7,
-      textColor: navy, lineWidth: 0, halign: "right",
+      textColor: navy, lineColor: border, lineWidth: 0.12, halign: "center",
+      valign: "middle",
     },
     columnStyles: {
-      0: { cellWidth: 45, halign: "left", textColor: textMuted },
-      1: { cellWidth: 37, halign: "right" },
+      0: { cellWidth: 45, halign: "center", textColor: textMuted },
+      1: { cellWidth: 37, halign: "center" },
     },
     didParseCell: (data) => {
       if (data.row.index === 3) {

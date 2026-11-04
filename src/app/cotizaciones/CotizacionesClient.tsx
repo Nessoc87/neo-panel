@@ -93,7 +93,7 @@ export default function CotizacionesClient() {
   const [filtro, setFiltro] = useState("TODOS");
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [pdfId, setPdfId] = useState<string | null>(null);
+  const [pdfId, setPdfId] = useState<string | null>(null);\n  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [ultimaCotizacion, setUltimaCotizacion] = useState<Cotizacion | null>(null);
@@ -229,6 +229,43 @@ export default function CotizacionesClient() {
       setError("No se pudo generar el PDF: " + detalleError(e));
     } finally {
       setPdfId(null);
+    }
+  }
+
+  async function eliminar(c: Cotizacion) {
+    const folio = c.folio || "sin folio";
+    const confirmado = window.confirm(
+      "¿Eliminar definitivamente la cotización " + folio + " de " + c.cliente +
+      "? Esta acción no se puede deshacer. El consecutivo no se reiniciará ni se reutilizará."
+    );
+    if (!confirmado) return;
+
+    setEliminandoId(c.id);
+    setError("");
+    setMensaje("");
+    try {
+      const response = await fetch("/api/cotizaciones?id=" + encodeURIComponent(c.id), {
+        method: "DELETE",
+        cache: "no-store",
+      });
+      const json = await response.json();
+
+      if (response.status === 401) {
+        window.location.assign("/login");
+        return;
+      }
+      if (!response.ok || json.ok !== true) {
+        throw new Error(json.message || "No se pudo eliminar la cotización.");
+      }
+
+      setItems((current) => current.filter((item) => item.id !== c.id));
+      setUltimaCotizacion((current) => current?.id === c.id ? null : current);
+      setMensaje("Cotización " + folio + " eliminada. El consecutivo se conserva y el siguiente folio no cambia.");
+    } catch (deleteError) {
+      console.error("Error eliminando cotización:", deleteError);
+      setError(detalleError(deleteError));
+    } finally {
+      setEliminandoId(null);
     }
   }
 
@@ -523,12 +560,12 @@ export default function CotizacionesClient() {
             <div className="p-10 text-center"><p className="font-semibold">No hay cotizaciones para mostrar.</p><p className="mt-2 text-sm text-slate-500">Registra una propuesta o modifica la búsqueda.</p></div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[1150px] text-left text-sm">
+              <table className="w-full min-w-[1240px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Folio / fecha</th><th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Servicio / ruta</th><th className="px-4 py-3">Partidas</th>
-                    <th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Acciones</th>
+                    <th className="px-4 py-3 text-center">Total</th><th className="px-4 py-3">Estado</th><th className="min-w-[174px] px-3 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -538,12 +575,37 @@ export default function CotizacionesClient() {
                       <td className="px-4 py-4"><p className="font-bold">{c.cliente}</p><p className="mt-1 text-xs text-slate-500">{c.contacto || c.telefono || "Sin contacto"}</p></td>
                       <td className="px-4 py-4"><p className="font-semibold">{c.servicio}</p><p className="mt-1 text-xs text-slate-500">{c.origen || "Origen pendiente"} → {c.destino || "Destino pendiente"}</p></td>
                       <td className="px-4 py-4"><p>{Array.isArray(c.partidas) && c.partidas.length ? c.partidas.length : "Sin desglose"}</p><p className="mt-1 text-xs text-slate-500">{c.fecha_servicio ? "Servicio: " + fecha(c.fecha_servicio) : "Fecha por confirmar"}</p></td>
-                      <td className="px-4 py-4 text-right font-bold">{dinero(c.total ?? c.monto_estimado)}</td>
+                      <td className="px-4 py-4 text-center font-bold tabular-nums">{dinero(c.total ?? c.monto_estimado)}</td>
                       <td className="px-4 py-4"><span className={"rounded-full px-3 py-1 text-xs font-bold " + estadoClase(c.estado)}>{(estados.find((x) => x[0] === c.estado) || [c.estado, c.estado])[1]}</span></td>
-                      <td className="px-4 py-4"><div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => editar(c)} className="rounded-lg border border-cyan-200 px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50">Editar</button>
-                        <button type="button" onClick={() => void descargarPdf(c)} disabled={pdfId === c.id} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700 disabled:opacity-50">{pdfId === c.id ? "PDF..." : "Descargar PDF"}</button>
-                      </div></td>
+                      <td className="min-w-[174px] overflow-visible px-3 py-4">
+                        <div className="flex min-w-[148px] flex-col items-stretch gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editar(c)}
+                            disabled={eliminandoId === c.id}
+                            className="w-full whitespace-nowrap rounded-lg border border-cyan-200 px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50 disabled:opacity-50"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void descargarPdf(c)}
+                            disabled={pdfId === c.id || eliminandoId === c.id}
+                            style={{ color: "#ffffff", backgroundColor: "#102b43" }}
+                            className="w-full min-w-[148px] whitespace-nowrap rounded-lg px-2 py-2 text-xs font-bold hover:!bg-[#0c7180] disabled:opacity-50"
+                          >
+                            {pdfId === c.id ? "Preparando PDF..." : "Descargar PDF"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void eliminar(c)}
+                            disabled={eliminandoId === c.id || pdfId === c.id}
+                            className="w-full whitespace-nowrap rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                          >
+                            {eliminandoId === c.id ? "Eliminando..." : "Eliminar"}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

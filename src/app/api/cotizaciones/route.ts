@@ -229,3 +229,44 @@ export async function PATCH(request: NextRequest) {
     return error("Ocurrió un error al actualizar la cotización.", 500);
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  if (!(await autorizado())) return error("Inicia sesión para eliminar cotizaciones.", 401);
+
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) return error("Origen de solicitud no permitido.", 403);
+
+  const id = texto(request.nextUrl.searchParams.get("id"), 50);
+  if (!id) return error("El identificador de la cotización es obligatorio.");
+
+  try {
+    const { data, error: dbError } = await supabaseAdmin
+      .from("neo_cotizaciones")
+      .delete()
+      .eq("id", id)
+      .select("id, folio")
+      .maybeSingle();
+
+    if (dbError) {
+      console.error("Error eliminando cotización:", {
+        code: dbError.code,
+        message: dbError.message,
+        details: dbError.details,
+        hint: dbError.hint,
+      });
+      return error("No fue posible eliminar la cotización.", 500);
+    }
+
+    if (!data) return error("No se encontró la cotización seleccionada.", 404);
+
+    // Intentionally do not reset the PostgreSQL sequence. Folios are never reused.
+    return NextResponse.json(
+      { ok: true, data, message: "Cotización eliminada. El consecutivo se conserva." },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (deleteError) {
+    console.error("Error inesperado eliminando cotización:", deleteError);
+    return error("Ocurrió un error al eliminar la cotización.", 500);
+  }
+}
+
