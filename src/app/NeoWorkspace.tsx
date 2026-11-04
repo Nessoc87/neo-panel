@@ -75,7 +75,9 @@ function NavIcon({ name, size = 20 }: { name: IconName; size?: number }) {
       return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5h-7L5 19v-4.6a2.5 2.5 0 0 1-1-1.9Z" /><path d="M8 8h8M8 11.5h5" /></svg>;
     case "clients":
       return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19.5v-1.2a5.5 5.5 0 0 1 11 0v1.2Z" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6.2M17 14.4a5.2 5.2 0 0 1 3.5 4.9v.2" /></svg>;
-    case "users":\n      return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 11a3 3 0 1 0 0-6M18 14a4 4 0 0 1 3 4v2" /></svg>;\n    case "services":
+    case "users":
+      return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 11a3 3 0 1 0 0-6M18 14a4 4 0 0 1 3 4v2" /></svg>;
+    case "services":
       return <svg {...common}><path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z" /><path d="M3.5 7.5V17L12 21l8.5-4V7.5M12 12v9M7.8 5.3l8.5 4.6" /></svg>;
   }
 }
