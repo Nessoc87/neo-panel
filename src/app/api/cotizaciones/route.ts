@@ -14,16 +14,13 @@ type Input = {
 
 const ESTADOS = ["PENDIENTE","EN_REVISION","COTIZADA","ACEPTADA","RECHAZADA","CANCELADA"];
 const CONDICIONES_DEFAULT = [
-  "1. Vigencia: esta propuesta es válida durante 15 días naturales a partir de su fecha de emisión.",
-  "2. Confirmación: la programación del servicio está sujeta a disponibilidad y a la aceptación por escrito de esta cotización.",
-  "3. Información del servicio: el cliente debe proporcionar datos completos y correctos sobre mercancía, peso, dimensiones, origen, destino, horarios, accesos y requisitos especiales.",
-  "4. Alcance y cargos adicionales: maniobras, esperas, casetas, almacenajes, cambios de ruta, kilómetros adicionales o segundos intentos que no estén incluidos en esta propuesta se cotizarán por separado y requerirán autorización del cliente antes de realizarse.",
-  "5. Programación: las fechas y horarios se confirman al aceptar el servicio. Cualquier ajuste estará sujeto a disponibilidad operativa.",
-  "6. Cambios y cancelaciones: deberán solicitarse con al menos 24 horas de anticipación. Los gastos o trabajos ya realizados y los compromisos no recuperables podrán cobrarse, previa justificación.",
-  "7. Recepción y entrega: se podrá solicitar nombre y firma de quien recibe, así como evidencia razonable de recolección o entrega.",
-  "8. Pago: la forma, fecha y plazo de pago serán los acordados por escrito al confirmar el servicio.",
-  "9. Impuestos: el IVA y las retenciones mostrados se calculan con los porcentajes capturados en cada partida. Su aplicación definitiva deberá corresponder al tratamiento fiscal de la operación y de las partes.",
-  "10. Seguro: cualquier cobertura de seguro deberá aparecer expresamente indicada en las partidas o notas de esta cotización; de lo contrario, se entenderá no incluida."
+  "• Vigencia: esta propuesta es válida durante 15 días naturales a partir de su fecha de emisión.",
+  "• Confirmación: la programación del servicio está sujeta a disponibilidad y a la aceptación por escrito de esta cotización.",
+  "• Información del servicio: el cliente debe proporcionar datos completos y correctos sobre mercancía, peso, dimensiones, origen, destino, horarios, accesos y requisitos especiales.",
+  "• Alcance y cargos adicionales: maniobras, esperas, casetas, almacenajes, cambios de ruta, kilómetros adicionales o segundos intentos que no estén incluidos en esta propuesta se cotizarán por separado y requerirán autorización del cliente antes de realizarse.",
+  "• Programación: las fechas y horarios se confirman al aceptar el servicio. Cualquier ajuste estará sujeto a disponibilidad operativa.",
+  "• Cambios y cancelaciones: deberán solicitarse con al menos 24 horas de anticipación. Los gastos o trabajos ya realizados y los compromisos no recuperables podrán cobrarse, previa justificación.",
+  "• Recepción y entrega: se podrá solicitar nombre y firma de quien recibe, así como evidencia razonable de recolección o entrega.",
 ].join("\n");
 
 type PartidaNormalizada = {

@@ -41,10 +41,10 @@ export type CotizacionPdfData = {
 };
 
 const navy: [number, number, number] = [16, 43, 68];
-const teal: [number, number, number] = [12, 132, 145];
-const pale: [number, number, number] = [241, 246, 249];
-const slate: [number, number, number] = [94, 111, 128];
-const border: [number, number, number] = [218, 228, 236];
+const blue: [number, number, number] = [31, 91, 143];
+const lightBlue: [number, number, number] = [243, 248, 252];
+const textMuted: [number, number, number] = [83, 101, 119];
+const border: [number, number, number] = [211, 224, 235];
 
 const dinero = (value: unknown) => new Intl.NumberFormat("es-MX", {
   style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -64,13 +64,10 @@ function fechaBonita(value: string | null | undefined): string {
 }
 async function imagenDataUrl(path: string): Promise<string | null> {
   try {
-    // Load a known JPEG asset. A missing or unreadable logo must never stop PDF generation.
     const response = await fetch(path, { cache: "no-store" });
     if (!response.ok) return null;
-
     const blob = await response.blob();
     if (!blob.type.startsWith("image/")) return null;
-
     return await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -86,6 +83,13 @@ async function imagenDataUrl(path: string): Promise<string | null> {
   }
 }
 
+function normalizarCondiciones(value: string | null | undefined): string[] {
+  return (value || "").split(/\r?\n/)
+    .map((line) => line.trim().replace(/^\s*(?:\d{1,2}[.)]|[•●▪*-])\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 7);
+}
+
 export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   doc.setProperties({
@@ -99,68 +103,55 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
     imagenDataUrl("/caps-logo.jpg"),
     imagenDataUrl("/neo-logo.jpg"),
   ]);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 14;
+  const margin = 12;
   const contentWidth = pageWidth - margin * 2;
-  const formatPercent = (value: unknown) => Number(value ?? 0).toLocaleString("es-MX", { maximumFractionDigits: 2 }) + "%";
+  const formatPercent = (value: unknown) =>
+    Number(value ?? 0).toLocaleString("es-MX", { maximumFractionDigits: 2 }) + "%";
 
   doc.setFillColor(...navy);
-  doc.rect(0, 0, pageWidth, 3, "F");
-  doc.setTextColor(...teal);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.text("NEO TRANSPORTACIONES  /  OPERACIÓN Y LOGÍSTICA", margin, 12);
+  doc.rect(0, 0, pageWidth, 2.2, "F");
+
+  const logoX = pageWidth - margin - 45;
+  const logoWidth = 45;
+  const logoHeight = 17;
+  const leftAreaWidth = logoX - margin - 5;
+  const titleCenterX = margin + leftAreaWidth / 2;
 
   doc.setTextColor(...navy);
-  doc.setFontSize(17);
-  doc.text("COTIZACIÓN DE SERVICIOS", margin, 22);
-  doc.setTextColor(...slate);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(19);
+  doc.text("COTIZACIÓN DE SERVICIOS", titleCenterX, 22, { align: "center" });
+  doc.setTextColor(...blue);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text("Propuesta comercial", margin, 27);
+  doc.text("Propuesta comercial", titleCenterX, 29, { align: "center" });
 
-  if (capsLogo) {
-    try {
-      doc.addImage(capsLogo, "JPEG", pageWidth - 58, 7, 43, 14.8);
-    } catch (error) {
-      console.warn("No se pudo insertar el logotipo CAPS; se usará texto.", error);
-      doc.setTextColor(99, 42, 142);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("CAPS", pageWidth - 36, 16, { align: "center" });
+  const insertarLogo = (data: string | null, x: number, y: number, texto: string, color: [number, number, number]) => {
+    if (data) {
+      try {
+        doc.addImage(data, "JPEG", x, y, logoWidth, logoHeight);
+        return;
+      } catch (error) {
+        console.warn("No se pudo insertar el logotipo " + texto + "; se usará texto.", error);
+      }
     }
-  } else {
-    doc.setTextColor(99, 42, 142);
+    doc.setTextColor(...color);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.text("CAPS", pageWidth - 36, 16, { align: "center" });
-  }
-
-  if (neoLogo) {
-    try {
-      doc.addImage(neoLogo, "JPEG", pageWidth - 57, 24, 42, 22.7);
-    } catch (error) {
-      console.warn("No se pudo insertar el logotipo Neo; se usará texto.", error);
-      doc.setTextColor(...navy);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("NEO", pageWidth - 36, 37, { align: "center" });
-    }
-  } else {
-    doc.setTextColor(...navy);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("NEO", pageWidth - 36, 37, { align: "center" });
-  }
+    doc.setFontSize(13);
+    doc.text(texto, x + logoWidth / 2, y + 10, { align: "center" });
+  };
+  insertarLogo(capsLogo, logoX, 6, "CAPS", blue);
+  insertarLogo(neoLogo, logoX, 25, "NEO", navy);
 
   const folio = cotizacion.folio || ("COT-" + (cotizacion.id || "PENDIENTE").slice(0, 8).toUpperCase());
   const fechaEmision = fechaBonita(cotizacion.fecha_servicio || cotizacion.created_at || new Date().toISOString());
 
-  // The customer-facing header contains only the four requested data points.
   const cardGap = 4;
   const cardWidth = (contentWidth - cardGap) / 2;
-  const cardHeight = 19;
+  const cardHeight = 16.5;
   const cardX1 = margin;
   const cardX2 = margin + cardWidth + cardGap;
 
@@ -168,23 +159,21 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
     doc.setDrawColor(...border);
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, "FD");
-
-    doc.setTextColor(...teal);
+    doc.setTextColor(...blue);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.3);
-    doc.text(label.toUpperCase(), x + 3.5, y + 5.2);
-
+    doc.setFontSize(6.1);
+    doc.text(label.toUpperCase(), x + 3, y + 4.8);
     doc.setTextColor(...navy);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.8);
-    const wrapped = doc.splitTextToSize(value || "No especificado", cardWidth - 7).slice(0, 2);
-    doc.text(wrapped, x + 3.5, y + 12.4, { lineHeightFactor: 1.15 });
+    doc.setFontSize(8.2);
+    const wrapped = doc.splitTextToSize(value || "No especificado", cardWidth - 6).slice(0, 2);
+    doc.text(wrapped, x + 3, y + 11, { lineHeightFactor: 1.08 });
   };
 
-  infoCard(cardX1, 51, "Número de cotización", folio);
-  infoCard(cardX2, 51, "Fecha", fechaEmision);
-  infoCard(cardX1, 73, "Cliente", cotizacion.cliente || "No especificado");
-  infoCard(cardX2, 73, "Contacto", cotizacion.contacto || "No especificado");
+  infoCard(cardX1, 47, "Número de cotización", folio);
+  infoCard(cardX2, 47, "Fecha", fechaEmision);
+  infoCard(cardX1, 65.5, "Cliente", cotizacion.cliente || "No especificado");
+  infoCard(cardX2, 65.5, "Contacto", cotizacion.contacto || "No especificado");
 
   const sourceLines = Array.isArray(cotizacion.partidas) ? cotizacion.partidas : [];
   const isLegacy = sourceLines.length === 0;
@@ -213,9 +202,6 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
     ? dosDecimales(cotizacion.total)
     : subtotal + iva - retencion;
 
-  const serviceTable = [
-    ["DESCRIPCIÓN", "CANT.", "COSTO UNITARIO", "SUBTOTAL", "TOTAL"],
-  ];
   const tableRows = lines.map((line) => {
     const ivaPct = formatPercent(line.iva_porcentaje ?? 0);
     const retPct = formatPercent(line.retencion_porcentaje ?? 0);
@@ -228,34 +214,35 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
     ];
   });
 
+  const itemFontSize = Math.max(5.7, lines.length > 5 ? 6.1 : 6.7 - Math.max(0, lines.length - 2) * 0.12);
   autoTable(doc, {
-    startY: (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
-      ? (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable!.finalY + 8
-      : 101,
-    head: [serviceTable[0]],
+    startY: 88,
+    head: [["DESCRIPCIÓN", "CANT.", "COSTO UNITARIO", "SUBTOTAL", "TOTAL"]],
     body: tableRows,
     theme: "grid",
-    margin: { left: margin, right: margin, bottom: 22 },
-    styles: { font: "helvetica", fontSize: 7.5, cellPadding: 3, textColor: navy, lineColor: border, lineWidth: 0.15, overflow: "linebreak", valign: "middle" },
-    headStyles: { fillColor: teal, textColor: 255, fontStyle: "bold", fontSize: 6.6, cellPadding: 3.2 },
-    alternateRowStyles: { fillColor: [248, 251, 252] },
+    pageBreak: "avoid",
+    rowPageBreak: "avoid",
+    margin: { left: margin, right: margin, bottom: 17 },
+    styles: {
+      font: "helvetica", fontSize: itemFontSize, cellPadding: 1.8,
+      textColor: navy, lineColor: border, lineWidth: 0.12,
+      overflow: "linebreak", valign: "middle",
+    },
+    headStyles: { fillColor: navy, textColor: 255, fontStyle: "bold", fontSize: 6.1, cellPadding: 2.2 },
+    alternateRowStyles: { fillColor: lightBlue },
     columnStyles: {
-      0: { cellWidth: 76 },
-      1: { cellWidth: 18, halign: "center" },
+      0: { cellWidth: 78 },
+      1: { cellWidth: 16, halign: "center" },
       2: { cellWidth: 31, halign: "right" },
       3: { cellWidth: 29, halign: "right" },
-      4: { cellWidth: 28, halign: "right", fontStyle: "bold" },
+      4: { cellWidth: 30, halign: "right", fontStyle: "bold" },
     },
   });
 
-  let cursorY = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 110) + 8;
-  if (cursorY + 39 > pageHeight - 22) {
-    doc.addPage();
-    cursorY = 20;
-  }
-
+  const itemBottom = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 100;
+  const totalsY = itemBottom + 3.5;
   autoTable(doc, {
-    startY: cursorY,
+    startY: totalsY,
     body: [
       ["Subtotal", dinero(subtotal)],
       ["IVA", dinero(iva)],
@@ -263,72 +250,120 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
       ["TOTAL DE LA COTIZACIÓN", dinero(total)],
     ],
     theme: "plain",
-    tableWidth: 78,
-    margin: { left: pageWidth - margin - 78, right: margin, bottom: 22 },
-    styles: { font: "helvetica", fontSize: 8, cellPadding: 2.2, textColor: navy, lineWidth: 0, halign: "right" },
-    columnStyles: { 0: { cellWidth: 42, halign: "left", textColor: slate }, 1: { cellWidth: 36, halign: "right" } },
+    pageBreak: "avoid",
+    tableWidth: 82,
+    margin: { left: pageWidth - margin - 82, right: margin, bottom: 17 },
+    styles: {
+      font: "helvetica", fontSize: 7.8, cellPadding: 1.7,
+      textColor: navy, lineWidth: 0, halign: "right",
+    },
+    columnStyles: {
+      0: { cellWidth: 45, halign: "left", textColor: textMuted },
+      1: { cellWidth: 37, halign: "right" },
+    },
     didParseCell: (data) => {
       if (data.row.index === 3) {
         data.cell.styles.fillColor = navy;
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 9;
+        data.cell.styles.fontSize = 8.8;
+        data.cell.styles.cellPadding = 2.2;
+        data.cell.styles.halign = "center";
       }
     },
   });
-  cursorY = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? cursorY) + 6;
+
+  const totalsBottom = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? totalsY + 25;
+  let contentBottom = totalsBottom;
 
   if (cotizacion.notas?.trim()) {
-    if (cursorY + 23 > pageHeight - 24) { doc.addPage(); cursorY = 18; }
-    autoTable(doc, {
-      startY: cursorY,
-      head: [["OBSERVACIONES"]],
-      body: [[cotizacion.notas.trim()]],
-      theme: "grid",
-      margin: { left: margin, right: margin, bottom: 22 },
-      styles: { font: "helvetica", fontSize: 7.2, cellPadding: 3, textColor: navy, lineColor: border, lineWidth: 0.15 },
-      headStyles: { fillColor: pale, textColor: navy, fontStyle: "bold", fontSize: 6.6 },
-    });
-    cursorY = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? cursorY) + 5;
-  }
-
-  const conditions = (cotizacion.condiciones || "").trim();
-  if (conditions) {
-    if (cursorY + 22 > pageHeight - 24) { doc.addPage(); cursorY = 18; }
-    autoTable(doc, {
-      startY: cursorY,
-      head: [["TÉRMINOS Y CONDICIONES"]],
-      body: conditions.split(/\r?\n/).map((line) => [line.trim()]).filter((row) => row[0]),
-      theme: "grid",
-      margin: { left: margin, right: margin, bottom: 22 },
-      styles: { font: "helvetica", fontSize: 6.8, cellPadding: 2.4, textColor: slate, lineColor: border, lineWidth: 0.12, overflow: "linebreak" },
-      headStyles: { fillColor: navy, textColor: 255, fontStyle: "bold", fontSize: 6.6 },
-    });
-    cursorY = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? cursorY) + 7;
-  }
-
-  if (cursorY + 18 < pageHeight - 20) {
-    doc.setDrawColor(...border);
-    doc.line(margin, cursorY + 3, pageWidth - margin, cursorY + 3);
-    doc.setTextColor(...slate);
+    const noteX = margin;
+    const noteY = totalsY + 1;
+    const noteWidth = contentWidth - 88;
+    doc.setTextColor(...blue);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.3);
+    doc.text("OBSERVACIONES", noteX, noteY + 3);
+    doc.setTextColor(...textMuted);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.text("Aceptación del cliente", margin + 2, cursorY + 10);
-    doc.text("Nombre, firma y fecha", margin + 2, cursorY + 15);
-    doc.line(pageWidth - 72, cursorY + 9, pageWidth - margin - 2, cursorY + 9);
+    doc.setFontSize(6.2);
+    const noteLines = doc.splitTextToSize(cotizacion.notas.trim(), noteWidth);
+    doc.text(noteLines, noteX, noteY + 7, { lineHeightFactor: 1.08 });
+    const noteBottom = noteY + 7 + noteLines.length * 2.5;
+    contentBottom = Math.max(contentBottom, noteBottom);
   }
 
-  const pageCount = doc.getNumberOfPages();
-  for (let page = 1; page <= pageCount; page += 1) {
-    doc.setPage(page);
-    doc.setDrawColor(...border);
-    doc.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);
-    doc.setTextColor(...slate);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
-    doc.text("Documento de cotización comercial. No sustituye una factura o CFDI.", margin, pageHeight - 8);
-    doc.text("NEO TRANSPORTACIONES  ·  " + folio + "  ·  Página " + page + " de " + pageCount, pageWidth - margin, pageHeight - 8, { align: "right" });
+  const conditions = normalizarCondiciones(cotizacion.condiciones);
+  let termsY = contentBottom + 5;
+  if (conditions.length) {
+    const termsHeaderHeight = 6;
+    doc.setFillColor(...navy);
+    doc.rect(margin, termsY, contentWidth, termsHeaderHeight, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.4);
+    doc.text("TÉRMINOS Y CONDICIONES", margin + 3, termsY + 4.1);
+
+    const termsStartY = termsY + termsHeaderHeight;
+    const availableTermsHeight = Math.max(18, pageHeight - 23 - termsStartY);
+    let termsFontSize = 6.0;
+    let measuredRows: { text: string[]; height: number }[] = [];
+
+    const measureTerms = (fontSize: number) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(fontSize);
+      const lineHeight = fontSize * 0.43;
+      return conditions.map((condition) => {
+        const wrapped = doc.splitTextToSize(condition, contentWidth - 13);
+        return { text: wrapped, height: Math.max(4.4, wrapped.length * lineHeight + 2.2) };
+      });
+    };
+
+    measuredRows = measureTerms(termsFontSize);
+    let measuredHeight = measuredRows.reduce((sum, row) => sum + row.height, 0);
+    while (measuredHeight > availableTermsHeight && termsFontSize > 4.8) {
+      termsFontSize -= 0.2;
+      measuredRows = measureTerms(termsFontSize);
+      measuredHeight = measuredRows.reduce((sum, row) => sum + row.height, 0);
+    }
+
+    let rowY = termsStartY;
+    measuredRows.forEach((row) => {
+      doc.setDrawColor(...border);
+      doc.setLineWidth(0.12);
+      doc.rect(margin, rowY, contentWidth, row.height);
+      doc.setFillColor(...blue);
+      doc.circle(margin + 4, rowY + row.height / 2, 0.55, "F");
+      doc.setTextColor(...textMuted);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(termsFontSize);
+      doc.text(row.text, margin + 8, rowY + 2.4, { lineHeightFactor: 1.08 });
+      rowY += row.height;
+    });
+    contentBottom = rowY;
   }
+
+  if (contentBottom + 17 < pageHeight - 18) {
+    const signY = contentBottom + 5;
+    doc.setDrawColor(...border);
+    doc.setLineWidth(0.2);
+    doc.line(margin, signY, pageWidth - margin, signY);
+    doc.setTextColor(...textMuted);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.6);
+    doc.text("Aceptación del cliente", margin + 2, signY + 5);
+    doc.text("Nombre, firma y fecha", margin + 2, signY + 9);
+    doc.line(pageWidth - 74, signY + 7, pageWidth - margin - 2, signY + 7);
+  }
+
+  doc.setDrawColor(...border);
+  doc.setLineWidth(0.2);
+  doc.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);
+  doc.setTextColor(...textMuted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.3);
+  doc.text("Documento de cotización comercial. No sustituye una factura o CFDI.", margin, pageHeight - 7.5);
+  doc.text(folio, pageWidth - margin, pageHeight - 7.5, { align: "right" });
 
   const safeFolio = folio.replace(/[^a-zA-Z0-9_-]/g, "-");
   doc.save("Neo-Cotizacion-" + safeFolio + ".pdf");
