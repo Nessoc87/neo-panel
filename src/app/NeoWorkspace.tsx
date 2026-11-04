@@ -128,11 +128,14 @@ function NeoWorkspaceContent({ children }: { children: ReactNode }) {
 
       <aside className={`neo-sidebar ${mobileOpen ? "neo-sidebar-open" : ""}`} aria-label="Navegación principal">
         <Link href="/" className="neo-brand" aria-label="Neo Transportaciones, inicio" onClick={() => setMobileOpen(false)}>
-          <span className="neo-brand-icon">N</span>
-          <span className="neo-brand-copy">
-            <strong>NEO</strong>
-            <small>TRANSPORTACIONES</small>
-          </span>
+          <Image
+            src="/neo-logo.png"
+            alt="Neo Transportaciones"
+            width={240}
+            height={130}
+            priority
+            className="neo-brand-logo"
+          />
         </Link>
 
         <div className="neo-sidebar-label">ESPACIO DE TRABAJO</div>
