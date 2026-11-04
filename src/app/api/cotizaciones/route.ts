@@ -196,7 +196,7 @@ export async function PATCH(request: NextRequest) {
   if (diasVigencia === null) return error("La vigencia debe ser un número de 1 a 365 días.");
 
   const record: Record<string, unknown> = {
-    cliente_id: texto(body.cliente_id, 50), cliente, contacto: texto(body.contacto, 200),
+    cliente_id: texto(body.cliente_id, 50), cliente,
     telefono: texto(body.telefono, 40), servicio,
     origen: texto(body.origen, 500), destino: texto(body.destino, 500),
     mercancia: texto(body.mercancia, 500), peso: texto(body.peso, 100),
@@ -204,6 +204,8 @@ export async function PATCH(request: NextRequest) {
     fecha_servicio: fechaServicio, estado,
     notas: texto(body.notas, 2000), updated_at: new Date().toISOString(),
   };
+  // Keep the previously saved contact when older API clients omit this optional field.
+  if (body.contacto !== undefined) record.contacto = texto(body.contacto, 200);
   if (partidas !== undefined) {
     record.partidas = partidas.partidas;
     record.subtotal = partidas.subtotal;
