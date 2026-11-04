@@ -514,11 +514,21 @@ button:disabled {
 
 .neo-brand {
   display: flex;
+  min-height: 84px;
   align-items: center;
-  gap: 12px;
-  padding: 4px 8px 29px;
+  justify-content: flex-start;
+  padding: 0 8px 25px;
   color: #fff !important;
   text-decoration: none !important;
+}
+
+.neo-brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 218px;
+  height: 68px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .neo-brand-icon {
