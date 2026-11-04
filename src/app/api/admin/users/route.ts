@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     .from("neo_roles").select("id, name").eq("id", roleId).maybeSingle();
   if (roleError || !role) return apiError("El perfil seleccionado no existe.");
 
-  const siteUrl = process.env.NEO_APP_URL || "https://neo-panel-neo-transportaciones.vercel.app";
+  const siteUrl = process.env.NEO_APP_URL || request.nextUrl.origin;
   try {
     const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { full_name: fullName },

@@ -99,7 +99,7 @@ function NeoWorkspaceContent({ children }: { children: ReactNode }) {
       })
       .catch(() => { if (active) setIdentityLoaded(true); });
     return () => { active = false; };
-  }, []);
+  }, [pathname]);
 
   const visibleNavigation = identityLoaded
     ? navigation.filter((item) => item.ownerOnly ? identity?.isOwner === true : identity?.isOwner === true || identity?.permissions.includes(item.permission) === true)
