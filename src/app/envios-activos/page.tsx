@@ -4,7 +4,6 @@ import EnviosClient from "./EnviosClient";
 
 export const instant = false;
 
-export const dynamic = "force-dynamic";
 
 export default async function EnviosPage() {
   const principal = await getNeoPrincipal();

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getNeoHomePath, getNeoPrincipal } from "@/lib/neo-auth";
 import ServiciosClient from "./ServiciosClient";
 
-export const dynamic = "force-dynamic";
 export const instant = false;
 
 export default async function ServiciosPage() {
