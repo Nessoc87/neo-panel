@@ -14,43 +14,55 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, message: "La solicitud no contiene datos válidos." }, { status: 400 });
   }
   const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
+  const accessToken = typeof body.access_token === "string" ? body.access_token.trim() : "";
   const tokenHash = typeof body.token_hash === "string" ? body.token_hash.trim() : "";
   const type = typeof body.type === "string" ? body.type : "";
   const password = typeof body.password === "string" ? body.password : "";
 
-  if (!tokenHash || type !== "invite" || password.length < 10 || password.length > 128) {
+  if ((!accessToken && !tokenHash) || type !== "invite" || password.length < 10 || password.length > 128) {
     return NextResponse.json({ ok: false, message: "El enlace no es válido o la contraseña no cumple los requisitos." }, { status: 400 });
   }
 
   try {
-    const { data: verified, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: "invite",
-    });
-    if (verifyError || !verified.user) {
-      return NextResponse.json({ ok: false, message: "La invitación venció o ya fue utilizada. Solicita una nueva invitación al administrador." }, { status: 400 });
+    let invitedUserId: string;
+
+    if (accessToken) {
+      const { data: verified, error: verifyError } = await supabaseAdmin.auth.getUser(accessToken);
+      if (verifyError || !verified.user) {
+        return NextResponse.json({ ok: false, message: "La invitación venció o ya fue utilizada. Solicita una nueva invitación al administrador." }, { status: 400 });
+      }
+      invitedUserId = verified.user.id;
+    } else {
+      const { data: verified, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "invite",
+      });
+      if (verifyError || !verified.user) {
+        return NextResponse.json({ ok: false, message: "La invitación venció o ya fue utilizada. Solicita una nueva invitación al administrador." }, { status: 400 });
+      }
+      invitedUserId = verified.user.id;
     }
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("neo_usuarios")
       .select("auth_user_id, active, invitation_pending")
-      .eq("auth_user_id", verified.user.id)
+      .eq("auth_user_id", invitedUserId)
       .maybeSingle();
 
     if (profileError || !profile || !profile.active || !profile.invitation_pending) {
       return NextResponse.json({ ok: false, message: "La cuenta no está autorizada para aceptar esta invitación." }, { status: 403 });
     }
 
-    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(verified.user.id, { password });
+    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(invitedUserId, { password });
     if (passwordError) throw passwordError;
 
     const { error: activateError } = await supabaseAdmin
       .from("neo_usuarios")
       .update({ invitation_pending: false, updated_at: new Date().toISOString() })
-      .eq("auth_user_id", verified.user.id);
+      .eq("auth_user_id", invitedUserId);
     if (activateError) throw activateError;
 
-    const session = await createEmployeeSession(verified.user.id);
+    const session = await createEmployeeSession(invitedUserId);
     const response = NextResponse.json({ ok: true, message: "Invitación aceptada. Tu cuenta ya está activa." });
     response.cookies.set(EMPLOYEE_SESSION_COOKIE_NAME, session.token, {
       httpOnly: true,
