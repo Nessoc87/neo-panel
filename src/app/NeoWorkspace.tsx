@@ -17,7 +17,8 @@ const navigation: { href: string; label: string; description: string; icon: Icon
   { href: "/usuarios", label: "Usuarios y permisos", description: "Accesos del personal", icon: "users", permission: "users.manage", ownerOnly: true },
 ];
 
-const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: string }> = {\n  "/usuarios": { title: "Usuarios y permisos", subtitle: "Invita al personal y administra sus accesos.", eyebrow: "SEGURIDAD Y ADMINISTRACIÓN" },
+const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: string }> = {
+  "/usuarios": { title: "Usuarios y permisos", subtitle: "Invita al personal y administra sus accesos.", eyebrow: "SEGURIDAD Y ADMINISTRACIÓN" },
   "/": {
     title: "Panel de operaciones",
     subtitle: "Vista general de la operación de Neo Transportaciones.",
