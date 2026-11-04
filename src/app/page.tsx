@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getNeoPrincipal } from "@/lib/neo-auth";
+import { getNeoHomePath, getNeoPrincipal } from "@/lib/neo-auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const instant = false;
@@ -76,11 +76,12 @@ function EmptyState({ title, description }: { title: string; description: string
 export default async function Home() {
   const principal = await getNeoPrincipal();
   if (!principal) redirect("/login");
-  if (!principal.isOwner && !principal.permissions.includes("dashboard.view")) redirect("/");
+  if (!principal.isOwner && !principal.permissions.includes("dashboard.view")) redirect(getNeoHomePath(principal));
   const canQuotes = principal.isOwner || principal.permissions.includes("quotes.view");
   const canServices = principal.isOwner || principal.permissions.includes("services.view");
   const canShipments = principal.isOwner || principal.permissions.includes("shipments.view");
   const canClients = principal.isOwner || principal.permissions.includes("clients.view");
+  const canConversations = principal.isOwner || principal.permissions.includes("conversations.view");
   const canCreateQuotes = principal.isOwner || principal.permissions.includes("quotes.create");
   const canCreateServices = principal.isOwner || principal.permissions.includes("services.create");
 
@@ -102,10 +103,10 @@ export default async function Home() {
     supabaseAdmin.from("servicios").select("id, cliente, concepto, total, estatus, factura, created_at").order("created_at", { ascending: false }).limit(5),
   ]);
 
-  const pendingServices = (pendingServicesResult.data ?? []) as ServiceRow[];
-  const activeShipments = (activeShipmentsResult.data ?? []) as ShipmentRow[];
-  const recentQuotes = (recentQuotesResult.data ?? []) as QuoteRow[];
-  const recentServices = (recentServicesResult.data ?? []) as ServiceRow[];
+  const pendingServices = canServices ? (pendingServicesResult.data ?? []) as ServiceRow[] : [];
+  const activeShipments = canShipments ? (activeShipmentsResult.data ?? []) as ShipmentRow[] : [];
+  const recentQuotes = canQuotes ? (recentQuotesResult.data ?? []) as QuoteRow[] : [];
+  const recentServices = canServices ? (recentServicesResult.data ?? []) as ServiceRow[] : [];
 
   const quotesTotal = !canQuotes || quotesTotalResult.error ? null : quotesTotalResult.count ?? 0;
   const quotesQuoted = !canQuotes || quotesQuotedResult.error ? null : quotesQuotedResult.count ?? 0;

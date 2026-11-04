@@ -160,3 +160,13 @@ export async function registerActivity(
     console.error("No se pudo guardar el historial de actividad:", error);
   }
 }
+
+export function getNeoHomePath(principal: NeoPrincipal): string {
+  if (principal.isOwner || principal.permissions.includes("dashboard.view")) return "/";
+  if (principal.permissions.includes("quotes.view")) return "/cotizaciones";
+  if (principal.permissions.includes("shipments.view")) return "/envios-activos";
+  if (principal.permissions.includes("conversations.view")) return "/conversaciones";
+  if (principal.permissions.includes("services.view")) return "/servicios";
+  if (principal.permissions.includes("clients.view")) return "/clientes";
+  return "/login";
+}
