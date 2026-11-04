@@ -160,7 +160,7 @@ export default function UsuariosClient() {
       <section className="grid gap-6 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">
         <form onSubmit={invite} className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900">Invitar empleado</h3>
-          <p className="mt-1 text-sm text-slate-500">Supabase enviará un correo para activar la cuenta y crear una contraseña personal.</p>
+          <p className="mt-1 text-sm text-slate-500">Envía una invitación nueva o reenvía el acceso de una cuenta cuya activación quedó pendiente.</p>
           <label className="mt-5 block text-sm font-semibold text-slate-700">Nombre completo
             <input value={name} onChange={(e)=>setName(e.target.value)} required maxLength={120} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal outline-none focus:border-cyan-700"/>
           </label>
@@ -173,7 +173,7 @@ export default function UsuariosClient() {
             </select>
           </label>
           <button type="submit" disabled={saving || loading || !roleId} className="mt-5 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-cyan-800 disabled:opacity-50">
-            {saving ? "Enviando..." : "Enviar invitación"}
+            {saving ? "Enviando..." : "Enviar invitación / acceso"}
           </button>
         </form>
 
