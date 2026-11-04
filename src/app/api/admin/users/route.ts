@@ -96,10 +96,45 @@ export async function POST(request: NextRequest) {
   if (roleError || !role) return apiError("El perfil seleccionado no existe.");
 
   const siteUrl = process.env.NEO_APP_URL || request.nextUrl.origin;
+  const redirectUrl = siteUrl.replace(/\/$/, "") + "/auth/accept";
   try {
+    const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
+      .from("neo_usuarios")
+      .select("auth_user_id, active, invitation_pending")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingProfileError) throw existingProfileError;
+
+    // If an email provider already confirmed the invite link but the person
+    // never completed Neo activation, send a recovery email instead of trying
+    // to invite an email that already exists in Supabase Auth.
+    if (existingProfile) {
+      if (!existingProfile.active) {
+        return apiError("Esta cuenta está desactivada. Actívala primero desde Personal y accesos.");
+      }
+      if (!existingProfile.invitation_pending) {
+        return apiError("Ya existe una cuenta activa con ese correo. No es necesario enviar otra invitación.");
+      }
+
+      const { error: recoveryError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+      if (recoveryError) {
+        console.error("Error reenviando acceso de Neo:", recoveryError);
+        return apiError("No fue posible enviar el enlace para terminar de activar la cuenta.");
+      }
+
+      return NextResponse.json({
+        ok: true,
+        message: "La cuenta ya había confirmado el correo, pero faltaba terminar su activación en Neo. Enviamos un nuevo correo para crear la contraseña.",
+        user: { id: existingProfile.auth_user_id, email, invitation_pending: true },
+      }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    }
+
     const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { full_name: fullName },
-      redirectTo: siteUrl.replace(/\/$/, "") + "/auth/accept",
+      redirectTo: redirectUrl,
     });
     if (inviteError || !invited.user) {
       return apiError(inviteError?.message || "Supabase no pudo enviar la invitación.", 400);
