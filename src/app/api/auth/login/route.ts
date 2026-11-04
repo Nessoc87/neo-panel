@@ -10,6 +10,7 @@ import {
   createEmployeeSession,
   EMPLOYEE_SESSION_COOKIE_NAME,
   EMPLOYEE_SESSION_SECONDS,
+  revokeEmployeeSession,
 } from "@/lib/neo-auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
     secureCompare(username, configuredUser) &&
     secureCompare(password, configuredPassword)
   ) {
+    await revokeEmployeeSession(request.cookies.get(EMPLOYEE_SESSION_COOKIE_NAME)?.value);
     const token = createSessionToken(configuredUser);
     const response = NextResponse.json({ ok: true, user: { name: "Administrador principal", role: "Administrador principal" } });
     response.cookies.set(SESSION_COOKIE_NAME, token, {
@@ -115,6 +117,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Primero debes aceptar la invitación que enviamos a tu correo." }, { status: 403 });
     }
 
+    await revokeEmployeeSession(request.cookies.get(EMPLOYEE_SESSION_COOKIE_NAME)?.value);
     const session = await createEmployeeSession(profile.auth_user_id);
     const response = NextResponse.json({
       ok: true,
