@@ -28,7 +28,7 @@ async function readPrincipal(ownerToken?: string, employeeToken?: string): Promi
     return {
       id: null,
       email: process.env.NEO_ADMIN_USER || "administrador",
-      fullName: "Administrador principal",
+      fullName: "Nestor Osornio",
       role: "Administrador principal",
       roleId: null,
       isOwner: true,
