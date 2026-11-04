@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
   const type = typeof body.type === "string" ? body.type : "";
   const password = typeof body.password === "string" ? body.password : "";
 
-  if ((!accessToken && !tokenHash) || type !== "invite" || password.length < 10 || password.length > 128) {
+  const validTokenType = type === "invite" || type === "recovery";
+  if ((!accessToken && !tokenHash) || !validTokenType || password.length < 10 || password.length > 128) {
     return NextResponse.json({ ok: false, message: "El enlace no es válido o la contraseña no cumple los requisitos." }, { status: 400 });
   }
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     } else {
       const { data: verified, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
         token_hash: tokenHash,
-        type: "invite",
+        type: type as "invite" | "recovery",
       });
       if (verifyError || !verified.user) {
         return NextResponse.json({ ok: false, message: "La invitación venció o ya fue utilizada. Solicita una nueva invitación al administrador." }, { status: 400 });
