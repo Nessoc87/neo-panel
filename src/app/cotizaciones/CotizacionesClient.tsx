@@ -93,7 +93,8 @@ export default function CotizacionesClient() {
   const [filtro, setFiltro] = useState("TODOS");
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [pdfId, setPdfId] = useState<string | null>(null);\n  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [pdfId, setPdfId] = useState<string | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [ultimaCotizacion, setUltimaCotizacion] = useState<Cotizacion | null>(null);
