@@ -50,7 +50,7 @@ const crearPartida = (): PartidaForm => ({
   descripcion: "", cantidad: "1", precio_unitario: "", iva_porcentaje: "16", retencion_porcentaje: "0",
 });
 const nuevoFormulario = (): Form => ({
-  cliente_id: "", cliente: "", contacto: "", telefono: "", servicio: "Flete",
+  cliente_id: "", cliente: "", contacto: "", telefono: "", servicio: "Cotización",
   origen: "", destino: "", mercancia: "", peso: "", tipo_unidad: "", tipo_flete: "",
   fecha_servicio: "", estado: "PENDIENTE", notas: "", vigencia_dias: "15",
   condiciones: condicionesIniciales, partidas: [crearPartida()],
@@ -191,14 +191,6 @@ export default function CotizacionesClient() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function cambiarCliente(id: string) {
-    const c = clientes.find((x) => x.id === id);
-    setForm((prev) => ({
-      ...prev, cliente_id: id, cliente: c ? c.nombre : prev.cliente,
-      telefono: c?.telefono || prev.telefono,
-    }));
-  }
-
   function cambiarCampo<K extends Exclude<keyof Form, "partidas">>(key: K, value: Form[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -307,13 +299,6 @@ export default function CotizacionesClient() {
     }
   }
 
-  const campoTexto = (key: Exclude<keyof Form, "partidas">, label: string, placeholder = "") => (
-    <label key={key} className={etiqueta}>
-      {label}
-      <input value={form[key]} onChange={(e) => cambiarCampo(key, e.target.value)} className={campo} placeholder={placeholder} />
-    </label>
-  );
-
   return (
     <main className="neo-app min-h-screen bg-slate-100 text-slate-800">
       <header className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 px-5 py-5 text-white sm:px-8">
@@ -372,56 +357,61 @@ export default function CotizacionesClient() {
               <button type="button" onClick={() => setAbierto(false)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Cancelar</button>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <label className={etiqueta}>
-                Seleccionar cliente existente
-                <select value={form.cliente_id} onChange={(e) => cambiarCliente(e.target.value)} className={campo}>
-                  <option value="">Cliente / prospecto no registrado</option>
-                  {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
+                Cliente *
+                <input
+                  required
+                  list="neo-clientes-disponibles"
+                  value={form.cliente}
+                  onChange={(e) => {
+                    const nombre = e.target.value;
+                    const existente = clientes.find((c) => c.nombre.trim().toLocaleLowerCase() === nombre.trim().toLocaleLowerCase());
+                    setForm((prev) => ({
+                      ...prev,
+                      cliente: nombre,
+                      cliente_id: existente?.id || "",
+                      telefono: existente?.telefono || "",
+                    }));
+                  }}
+                  className={campo}
+                  placeholder="Nombre del cliente"
+                  maxLength={200}
+                />
+                <datalist id="neo-clientes-disponibles">
+                  {clientes.map((c) => <option key={c.id} value={c.nombre} />)}
+                </datalist>
               </label>
+
               <label className={etiqueta}>
-                Nombre de cliente o prospecto *
-                <input required value={form.cliente} onChange={(e) => setForm((prev) => ({
-                  ...prev, cliente: e.target.value,
-                  cliente_id: clientes.some((c) => c.id === prev.cliente_id && c.nombre === e.target.value) ? prev.cliente_id : "",
-                }))} className={campo} maxLength={200} />
+                Contacto
+                <input
+                  value={form.contacto}
+                  onChange={(e) => cambiarCampo("contacto", e.target.value)}
+                  className={campo}
+                  placeholder="Persona responsable"
+                  maxLength={200}
+                />
               </label>
-              {campoTexto("contacto", "Contacto / persona responsable", "Nombre del contacto")}
-              {campoTexto("telefono", "Teléfono", "Número de contacto")}
+
               <label className={etiqueta}>
-                Servicio
-                <select value={form.servicio} onChange={(e) => cambiarCampo("servicio", e.target.value)} className={campo}>
-                  <option>Flete</option><option>Flete + maniobra</option><option>Maniobra</option>
-                  <option>Mudanza</option><option>Recolección y entrega</option><option>Otro</option>
-                </select>
+                Fecha
+                <input
+                  type="date"
+                  value={form.fecha_servicio}
+                  onChange={(e) => cambiarCampo("fecha_servicio", e.target.value)}
+                  className={campo}
+                />
               </label>
+
               <label className={etiqueta}>
-                Tipo de flete
-                <select value={form.tipo_flete} onChange={(e) => cambiarCampo("tipo_flete", e.target.value)} className={campo}>
-                  <option value="">Sin definir</option><option value="local">Local</option><option value="foraneo">Foráneo</option>
-                </select>
-              </label>
-              {campoTexto("tipo_unidad", "Tipo de unidad", "Ej. Plataforma, caja seca")}
-              {campoTexto("origen", "Origen", "Ciudad o dirección de recolección")}
-              {campoTexto("destino", "Destino", "Ciudad o dirección de entrega")}
-              {campoTexto("mercancia", "Mercancía", "Descripción de la mercancía")}
-              {campoTexto("peso", "Peso / dimensiones", "Ej. 12 toneladas")}
-              <label className={etiqueta}>
-                Fecha de servicio
-                <input type="date" value={form.fecha_servicio} onChange={(e) => cambiarCampo("fecha_servicio", e.target.value)} className={campo} />
-              </label>
-              <label className={etiqueta}>
-                Estado
-                <select value={form.estado} onChange={(e) => cambiarCampo("estado", e.target.value)} className={campo}>
-                  {estados.map((x) => <option key={x[0]} value={x[0]}>{x[1]}</option>)}
-                </select>
-              </label>
-              <label className={etiqueta}>
-                Vigencia de la cotización
-                <select value={form.vigencia_dias} onChange={(e) => cambiarCampo("vigencia_dias", e.target.value)} className={campo}>
-                  <option value="7">7 días</option><option value="15">15 días</option><option value="30">30 días</option><option value="45">45 días</option>
-                </select>
+                Número de cotización
+                <input
+                  readOnly
+                  value={editando ? (items.find((c) => c.id === editando)?.folio || "Se asigna al guardar") : "Se asigna al guardar"}
+                  className={campo + " cursor-not-allowed bg-slate-50 font-semibold text-slate-500"}
+                  aria-label="Número de cotización asignado automáticamente"
+                />
               </label>
             </div>
 

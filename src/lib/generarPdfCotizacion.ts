@@ -128,7 +128,7 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   }
 
   const folio = cotizacion.folio || ("COT-" + (cotizacion.id || "PENDIENTE").slice(0, 8).toUpperCase());
-  const fechaEmision = fechaBonita(cotizacion.created_at || new Date().toISOString());
+  const fechaEmision = fechaBonita(cotizacion.fecha_servicio || cotizacion.created_at || new Date().toISOString());
 
   // The customer-facing header contains only the four requested data points.
   const cardGap = 4;

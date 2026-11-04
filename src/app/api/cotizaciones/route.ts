@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
   try { body = await request.json() as Input; } catch { return error("La solicitud no contiene JSON válido."); }
 
   const cliente = texto(body.cliente, 200);
-  const servicio = texto(body.servicio, 100);
-  if (!cliente || !servicio) return error("El cliente y el tipo de servicio son obligatorios.");
+  const servicio = texto(body.servicio, 100) ?? "Cotización";
+  if (!cliente) return error("El cliente es obligatorio.");
   const fechaServicio = fecha(body.fecha_servicio);
   const montoEstimado = monto(body.monto_estimado);
   const estado = texto(body.estado, 30) ?? "PENDIENTE";
