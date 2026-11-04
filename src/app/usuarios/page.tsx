@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getNeoPrincipal } from "@/lib/neo-auth";
 import UsuariosClient from "./UsuariosClient";
 
+export const instant = false;
+
 
 export default async function UsuariosPage() {
   const principal = await getNeoPrincipal();

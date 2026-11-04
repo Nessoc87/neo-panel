@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import AcceptInviteClient from "./AcceptInviteClient";
 
+export const instant = false;
+
 
 export default async function AcceptInvitationPage({
   searchParams,

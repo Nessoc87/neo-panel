@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 
 type IconName = "dashboard" | "quotes" | "shipments" | "messages" | "clients" | "services" | "users";
 
@@ -82,7 +82,7 @@ function NavIcon({ name, size = 20 }: { name: IconName; size?: number }) {
   }
 }
 
-export default function NeoWorkspace({ children }: { children: ReactNode }) {
+function NeoWorkspaceContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [identity, setIdentity] = useState<{ fullName: string; role: string; isOwner: boolean; permissions: string[] } | null>(null);
@@ -194,5 +194,14 @@ export default function NeoWorkspace({ children }: { children: ReactNode }) {
         <div className="neo-workspace-content">{children}</div>
       </div>
     </div>
+  );
+}
+
+
+export default function NeoWorkspace({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100" aria-busy="true" />}>
+      <NeoWorkspaceContent>{children}</NeoWorkspaceContent>
+    </Suspense>
   );
 }
