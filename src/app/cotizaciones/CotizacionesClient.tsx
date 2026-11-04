@@ -560,13 +560,22 @@ export default function CotizacionesClient() {
           ) : filtrados.length === 0 ? (
             <div className="p-10 text-center"><p className="font-semibold">No hay cotizaciones para mostrar.</p><p className="mt-2 text-sm text-slate-500">Registra una propuesta o modifica la búsqueda.</p></div>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[1240px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <div className="neo-quotes-table-wrap mt-4 w-full min-w-0 max-w-full overflow-x-auto">
+              <table className="neo-quotes-table w-full min-w-[980px] table-fixed text-left text-sm">
+                  <colgroup>
+                   <col style={{ width: "13%" }} />
+                   <col style={{ width: "13%" }} />
+                   <col style={{ width: "22%" }} />
+                   <col style={{ width: "9%" }} />
+                   <col style={{ width: "12%" }} />
+                   <col style={{ width: "11%" }} />
+                   <col style={{ width: "20%" }} />
+                 </colgroup>
+               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Folio / fecha</th><th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Servicio / ruta</th><th className="px-4 py-3">Partidas</th>
-                    <th className="px-4 py-3 text-center">Total</th><th className="px-4 py-3">Estado</th><th className="min-w-[174px] px-3 py-3">Acciones</th>
+                    <th className="px-4 py-3 text-center">Total</th><th className="px-4 py-3">Estado</th><th className="px-3 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -578,13 +587,13 @@ export default function CotizacionesClient() {
                       <td className="px-4 py-4"><p>{Array.isArray(c.partidas) && c.partidas.length ? c.partidas.length : "Sin desglose"}</p><p className="mt-1 text-xs text-slate-500">{c.fecha_servicio ? "Servicio: " + fecha(c.fecha_servicio) : "Fecha por confirmar"}</p></td>
                       <td className="px-4 py-4 text-center font-bold tabular-nums">{dinero(c.total ?? c.monto_estimado)}</td>
                       <td className="px-4 py-4"><span className={"rounded-full px-3 py-1 text-xs font-bold " + estadoClase(c.estado)}>{(estados.find((x) => x[0] === c.estado) || [c.estado, c.estado])[1]}</span></td>
-                      <td className="min-w-[174px] overflow-visible px-3 py-4">
-                        <div className="flex min-w-[148px] flex-col items-stretch gap-2">
+                      <td className="neo-quotes-actions-cell overflow-visible px-3 py-4">
+                        <div className="neo-quotes-actions flex w-full min-w-0 flex-col items-stretch gap-2">
                           <button
                             type="button"
                             onClick={() => editar(c)}
                             disabled={eliminandoId === c.id}
-                            className="w-full whitespace-nowrap rounded-lg border border-cyan-200 px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50 disabled:opacity-50"
+                            className="w-full min-w-0 whitespace-normal break-words rounded-lg border border-cyan-200 px-2 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50 disabled:opacity-50"
                           >
                             Editar
                           </button>
@@ -593,7 +602,7 @@ export default function CotizacionesClient() {
                             onClick={() => void descargarPdf(c)}
                             disabled={pdfId === c.id || eliminandoId === c.id}
                             style={{ color: "#ffffff", backgroundColor: "#102b43" }}
-                            className="w-full min-w-[148px] whitespace-nowrap rounded-lg px-2 py-2 text-xs font-bold hover:!bg-[#0c7180] disabled:opacity-50"
+                            className="w-full min-w-0 whitespace-normal break-words rounded-lg px-2 py-2 text-xs font-bold leading-4 hover:!bg-[#0c7180] disabled:opacity-50"
                           >
                             {pdfId === c.id ? "Preparando PDF..." : "Descargar PDF"}
                           </button>
@@ -601,7 +610,7 @@ export default function CotizacionesClient() {
                             type="button"
                             onClick={() => void eliminar(c)}
                             disabled={eliminandoId === c.id || pdfId === c.id}
-                            className="w-full whitespace-nowrap rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                            className="w-full min-w-0 whitespace-normal break-words rounded-lg border border-rose-200 bg-white px-2 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
                           >
                             {eliminandoId === c.id ? "Eliminando..." : "Eliminar"}
                           </button>
