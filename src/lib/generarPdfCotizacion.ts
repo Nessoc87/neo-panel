@@ -128,69 +128,36 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   }
 
   const folio = cotizacion.folio || ("COT-" + (cotizacion.id || "PENDIENTE").slice(0, 8).toUpperCase());
-  doc.setFillColor(236, 244, 248);
-  doc.roundedRect(margin, 33, 66, 12, 2, 2, "F");
-  doc.setTextColor(...slate);
-  doc.setFontSize(6.2);
-  doc.setFont("helvetica", "bold");
-  doc.text("FOLIO DE COTIZACIÓN", margin + 3, 37.5);
-  doc.setTextColor(...navy);
-  doc.setFontSize(9);
-  doc.text(folio, margin + 3, 42);
+  const fechaEmision = fechaBonita(cotizacion.created_at || new Date().toISOString());
 
-  doc.setFillColor(...teal);
-  doc.roundedRect(margin + 70, 33, 49, 12, 2, 2, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(6.2);
-  doc.text("FECHA DE EMISIÓN", margin + 73, 37.5);
-  doc.setFontSize(8);
-  doc.text(fechaBonita(cotizacion.created_at || new Date().toISOString()), margin + 73, 42);
+  // The customer-facing header contains only the four requested data points.
+  const cardGap = 4;
+  const cardWidth = (contentWidth - cardGap) / 2;
+  const cardHeight = 19;
+  const cardX1 = margin;
+  const cardX2 = margin + cardWidth + cardGap;
 
-  // Client and service details.
-  doc.setDrawColor(...border);
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(margin, 52, 112, 29, 2, 2, "FD");
-  doc.setTextColor(...teal);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.text("PREPARADO PARA", margin + 4, 58);
-  doc.setTextColor(...navy);
-  doc.setFontSize(11);
-  doc.text(doc.splitTextToSize(cotizacion.cliente || "Cliente", 103), margin + 4, 65);
-  doc.setTextColor(...slate);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  const contacto = [cotizacion.contacto, cotizacion.telefono].filter(Boolean).join("  ·  ") || "Contacto no especificado";
-  doc.text(doc.splitTextToSize(contacto, 103), margin + 4, 73);
+  const infoCard = (x: number, y: number, label: string, value: string) => {
+    doc.setDrawColor(...border);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, "FD");
 
-  doc.roundedRect(margin + 116, 52, 66, 29, 2, 2, "FD");
-  doc.setTextColor(...teal);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.text("VIGENCIA", margin + 120, 58);
-  doc.setTextColor(...navy);
-  doc.setFontSize(10);
-  doc.text((cotizacion.vigencia_dias || 15) + " días naturales", margin + 120, 65);
-  doc.setTextColor(...slate);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text("Fecha de servicio: " + fechaBonita(cotizacion.fecha_servicio), margin + 120, 73);
+    doc.setTextColor(...teal);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.3);
+    doc.text(label.toUpperCase(), x + 3.5, y + 5.2);
 
-  // Operational details, displayed only when provided.
-  const detailRows = [
-    ["SERVICIO", cotizacion.servicio || "Por definir", "RUTA", [cotizacion.origen, cotizacion.destino].filter(Boolean).join("  →  ") || "Por definir"],
-    ["UNIDAD / FLETE", [cotizacion.tipo_unidad, cotizacion.tipo_flete].filter(Boolean).join(" · ") || "Por definir", "MERCANCÍA / PESO", [cotizacion.mercancia, cotizacion.peso].filter(Boolean).join(" · ") || "Por definir"],
-  ];
-  autoTable(doc, {
-    startY: 85,
-    head: [["DATOS DEL SERVICIO", "DETALLE", "REFERENCIA", "DETALLE"]],
-    body: detailRows,
-    theme: "grid",
-    margin: { left: margin, right: margin },
-    styles: { font: "helvetica", fontSize: 7, cellPadding: 2.2, textColor: navy, lineColor: border, lineWidth: 0.15, overflow: "linebreak" },
-    headStyles: { fillColor: navy, textColor: 255, fontStyle: "bold", fontSize: 6.2 },
-    columnStyles: { 0: { cellWidth: 28, fontStyle: "bold" }, 1: { cellWidth: 63 }, 2: { cellWidth: 31, fontStyle: "bold" }, 3: { cellWidth: 60 } },
-  });
+    doc.setTextColor(...navy);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.8);
+    const wrapped = doc.splitTextToSize(value || "No especificado", cardWidth - 7).slice(0, 2);
+    doc.text(wrapped, x + 3.5, y + 12.4, { lineHeightFactor: 1.15 });
+  };
+
+  infoCard(cardX1, 51, "Número de cotización", folio);
+  infoCard(cardX2, 51, "Fecha", fechaEmision);
+  infoCard(cardX1, 73, "Cliente", cotizacion.cliente || "No especificado");
+  infoCard(cardX2, 73, "Contacto", cotizacion.contacto || "No especificado");
 
   const sourceLines = Array.isArray(cotizacion.partidas) ? cotizacion.partidas : [];
   const isLegacy = sourceLines.length === 0;
@@ -237,7 +204,7 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   autoTable(doc, {
     startY: (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
       ? (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable!.finalY + 8
-      : 108,
+      : 101,
     head: [serviceTable[0]],
     body: tableRows,
     theme: "grid",

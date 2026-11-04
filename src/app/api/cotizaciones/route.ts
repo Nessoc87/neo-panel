@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
   try {
     const { data, error: dbError } = await supabaseAdmin.from("neo_cotizaciones").insert(record).select("*").single();
     if (dbError) {
-      console.error("Error creando cotización:", dbError.code);
+      console.error("Error creando cotización:", { code: dbError.code, message: dbError.message, details: dbError.details, hint: dbError.hint });
       return error("No fue posible guardar la cotización.", 500);
     }
     return NextResponse.json({ ok: true, data, message: "Cotización registrada correctamente." }, { status: 201, headers: { "Cache-Control": "no-store" } });
@@ -223,7 +223,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error: dbError } = await supabaseAdmin.from("neo_cotizaciones")
       .update(record).eq("id", id).select("*").maybeSingle();
     if (dbError) {
-      console.error("Error editando cotización:", dbError.code);
+      console.error("Error editando cotización:", { code: dbError.code, message: dbError.message, details: dbError.details, hint: dbError.hint });
       return error("No fue posible actualizar la cotización.", 500);
     }
     if (!data) return error("No se encontró la cotización seleccionada.", 404);
