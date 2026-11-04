@@ -64,16 +64,24 @@ function fechaBonita(value: string | null | undefined): string {
 }
 async function imagenDataUrl(path: string): Promise<string | null> {
   try {
-    const response = await fetch(path, { cache: "force-cache" });
+    // Load a known JPEG asset. A missing or unreadable logo must never stop PDF generation.
+    const response = await fetch(path, { cache: "no-store" });
     if (!response.ok) return null;
+
     const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) return null;
+
     return await new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onload = () => {
+        const dataUrl = typeof reader.result === "string" ? reader.result : null;
+        resolve(dataUrl?.startsWith("data:image/jpeg;base64,") ? dataUrl : null);
+      };
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
     });
-  } catch {
+  } catch (error) {
+    console.warn("No se pudo cargar el logotipo para el PDF:", path, error);
     return null;
   }
 }
@@ -88,8 +96,8 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   });
 
   const [capsLogo, neoLogo] = await Promise.all([
-    imagenDataUrl("/caps-logo.png"),
-    imagenDataUrl("/neo-logo.png"),
+    imagenDataUrl("/caps-logo.jpg"),
+    imagenDataUrl("/neo-logo.jpg"),
   ]);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -112,15 +120,34 @@ export async function generarPdfCotizacion(cotizacion: CotizacionPdfData): Promi
   doc.setFontSize(8);
   doc.text("Propuesta comercial", margin, 27);
 
-  if (capsLogo) doc.addImage(capsLogo, "PNG", pageWidth - 58, 7, 43, 14.8);
-  else {
+  if (capsLogo) {
+    try {
+      doc.addImage(capsLogo, "JPEG", pageWidth - 58, 7, 43, 14.8);
+    } catch (error) {
+      console.warn("No se pudo insertar el logotipo CAPS; se usará texto.", error);
+      doc.setTextColor(99, 42, 142);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("CAPS", pageWidth - 36, 16, { align: "center" });
+    }
+  } else {
     doc.setTextColor(99, 42, 142);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("CAPS", pageWidth - 36, 16, { align: "center" });
   }
-  if (neoLogo) doc.addImage(neoLogo, "PNG", pageWidth - 57, 24, 42, 22.7);
-  else {
+
+  if (neoLogo) {
+    try {
+      doc.addImage(neoLogo, "JPEG", pageWidth - 57, 24, 42, 22.7);
+    } catch (error) {
+      console.warn("No se pudo insertar el logotipo Neo; se usará texto.", error);
+      doc.setTextColor(...navy);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("NEO", pageWidth - 36, 37, { align: "center" });
+    }
+  } else {
     doc.setTextColor(...navy);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);

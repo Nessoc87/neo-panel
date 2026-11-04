@@ -76,6 +76,16 @@ function estadoClase(estado: string) {
   return "bg-amber-100 text-amber-800";
 }
 
+function detalleError(error: unknown): string {
+  if (error instanceof Error) return error.message || error.name;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error) || String(error);
+  } catch {
+    return String(error);
+  }
+}
+
 export default function CotizacionesClient() {
   const [items, setItems] = useState<Cotizacion[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -215,8 +225,11 @@ export default function CotizacionesClient() {
     setError("");
     try {
       await generarPdfCotizacion(c);
+      setMensaje("PDF de " + (c.folio || "la cotización") + " descargado correctamente.");
     } catch (e) {
-      setError(e instanceof Error ? "No se pudo generar el PDF: " + e.message : "No se pudo generar el PDF.");
+      console.error("Error generando el PDF de cotización:", e);
+      setMensaje("");
+      setError("No se pudo generar el PDF: " + detalleError(e));
     } finally {
       setPdfId(null);
     }
@@ -288,8 +301,10 @@ export default function CotizacionesClient() {
         try {
           await generarPdfCotizacion(guardada);
           setMensaje("Cotización " + (guardada.folio || "") + " guardada y PDF descargado.");
-        } catch {
-          setError("La cotización se guardó correctamente, pero no se pudo descargar el PDF. Usa el botón «Descargar PDF» para intentarlo de nuevo.");
+        } catch (pdfError) {
+          console.error("La cotización se guardó, pero falló la generación del PDF:", pdfError);
+          setMensaje("La cotización " + (guardada.folio || "") + " se guardó correctamente.");
+          setError("No se pudo generar el PDF: " + detalleError(pdfError) + ". Puedes volver a intentarlo con el botón «Descargar PDF».");
         }
       }
     } catch (e) {
