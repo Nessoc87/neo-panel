@@ -59,7 +59,7 @@ export default function AcceptInviteClient() {
       return;
     }
     if (
-      credentials.type !== "invite" ||
+      (credentials.type !== "invite" && credentials.type !== "recovery") ||
       (!credentials.accessToken && !credentials.tokenHash)
     ) {
       setError("El enlace de invitación venció o no es válido. Solicita uno nuevo al administrador.");
@@ -94,7 +94,7 @@ export default function AcceptInviteClient() {
   }
 
   const validInvite =
-    credentials.type === "invite" &&
+    (credentials.type === "invite" || credentials.type === "recovery") &&
     Boolean(credentials.accessToken || credentials.tokenHash);
 
   return (
@@ -110,7 +110,7 @@ export default function AcceptInviteClient() {
         ) : !validInvite ? (
           <div className="mt-6 space-y-4">
             <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-              El enlace venció, ya fue utilizado o no corresponde a una invitación. Solicita al administrador que te envíe uno nuevo.
+              El enlace venció, ya fue utilizado o no corresponde a una activación de cuenta. Solicita al administrador que te envíe otro.
             </p>
             <button type="button" onClick={() => router.replace("/login")} className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Ir al inicio de sesión
