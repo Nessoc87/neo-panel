@@ -3,20 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-type IconName = "dashboard" | "quotes" | "shipments" | "messages" | "clients" | "services";
+type IconName = "dashboard" | "quotes" | "shipments" | "messages" | "clients" | "services" | "users";
 
-const navigation: { href: string; label: string; description: string; icon: IconName }[] = [
-  { href: "/", label: "Panel principal", description: "Resumen de operación", icon: "dashboard" },
-  { href: "/cotizaciones", label: "Cotizaciones", description: "Solicitudes y propuestas", icon: "quotes" },
-  { href: "/envios-activos", label: "Envíos activos", description: "Seguimiento en ruta", icon: "shipments" },
-  { href: "/conversaciones", label: "Conversaciones", description: "Atención por WhatsApp", icon: "messages" },
-  { href: "/clientes", label: "Clientes", description: "Directorio comercial", icon: "clients" },
-  { href: "/servicios", label: "Servicios", description: "Registro y facturación", icon: "services" },
+const navigation: { href: string; label: string; description: string; icon: IconName; permission: string; ownerOnly?: boolean }[] = [
+  { href: "/", label: "Panel principal", description: "Resumen de operación", icon: "dashboard", permission: "dashboard.view" },
+  { href: "/cotizaciones", label: "Cotizaciones", description: "Solicitudes y propuestas", icon: "quotes", permission: "quotes.view" },
+  { href: "/envios-activos", label: "Envíos activos", description: "Seguimiento en ruta", icon: "shipments", permission: "shipments.view" },
+  { href: "/conversaciones", label: "Conversaciones", description: "Atención por WhatsApp", icon: "messages", permission: "conversations.view" },
+  { href: "/clientes", label: "Clientes", description: "Directorio comercial", icon: "clients", permission: "clients.view" },
+  { href: "/servicios", label: "Servicios", description: "Registro y facturación", icon: "services", permission: "services.view" },
+  { href: "/usuarios", label: "Usuarios y permisos", description: "Accesos del personal", icon: "users", permission: "users.manage", ownerOnly: true },
 ];
 
-const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: string }> = {
+const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: string }> = {\n  "/usuarios": { title: "Usuarios y permisos", subtitle: "Invita al personal y administra sus accesos.", eyebrow: "SEGURIDAD Y ADMINISTRACIÓN" },
   "/": {
     title: "Panel de operaciones",
     subtitle: "Vista general de la operación de Neo Transportaciones.",
@@ -73,7 +74,7 @@ function NavIcon({ name, size = 20 }: { name: IconName; size?: number }) {
       return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5h-7L5 19v-4.6a2.5 2.5 0 0 1-1-1.9Z" /><path d="M8 8h8M8 11.5h5" /></svg>;
     case "clients":
       return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19.5v-1.2a5.5 5.5 0 0 1 11 0v1.2Z" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6.2M17 14.4a5.2 5.2 0 0 1 3.5 4.9v.2" /></svg>;
-    case "services":
+    case "users":\n      return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 11a3 3 0 1 0 0-6M18 14a4 4 0 0 1 3 4v2" /></svg>;\n    case "services":
       return <svg {...common}><path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z" /><path d="M3.5 7.5V17L12 21l8.5-4V7.5M12 12v9M7.8 5.3l8.5 4.6" /></svg>;
   }
 }
@@ -81,8 +82,27 @@ function NavIcon({ name, size = 20 }: { name: IconName; size?: number }) {
 export default function NeoWorkspace({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [identity, setIdentity] = useState<{ fullName: string; role: string; isOwner: boolean; permissions: string[] } | null>(null);
+  const [identityLoaded, setIdentityLoaded] = useState(false);
 
-  if (!pathname || pathname === "/login" || pathname.startsWith("/api/")) {
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => {
+        if (!active) return;
+        setIdentity(result.authenticated ? result.user : null);
+        setIdentityLoaded(true);
+      })
+      .catch(() => { if (active) setIdentityLoaded(true); });
+    return () => { active = false; };
+  }, []);
+
+  const visibleNavigation = identityLoaded
+    ? navigation.filter((item) => item.ownerOnly ? identity?.isOwner === true : identity?.isOwner === true || identity?.permissions.includes(item.permission) === true)
+    : [];
+
+  if (!pathname || pathname === "/login" || pathname.startsWith("/api/") || pathname.startsWith("/auth/")) {
     return <>{children}</>;
   }
 
@@ -114,7 +134,7 @@ export default function NeoWorkspace({ children }: { children: ReactNode }) {
 
         <div className="neo-sidebar-label">ESPACIO DE TRABAJO</div>
         <nav className="neo-nav">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
@@ -165,7 +185,7 @@ export default function NeoWorkspace({ children }: { children: ReactNode }) {
           <div className="neo-topbar-right">
             <div className="neo-live-indicator"><span className="neo-status-dot" /><span>Panel operativo</span></div>
             <div className="neo-topbar-divider" />
-            <div className="neo-account-chip"><span className="neo-account-avatar">N</span><span><strong>Neo</strong><small>Administración</small></span></div>
+            <div className="neo-account-chip"><span className="neo-account-avatar">{(identity?.fullName || "N").slice(0, 1).toUpperCase()}</span><span><strong>{identity?.fullName || "Neo"}</strong><small>{identity?.role || "Cargando perfil"}</small></span></div>
           </div>
         </header>
         <div className="neo-workspace-content">{children}</div>

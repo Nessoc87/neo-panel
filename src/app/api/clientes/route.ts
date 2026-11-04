@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 type ClienteInput = {
   id?: unknown;
@@ -22,11 +21,6 @@ function value(input: unknown, max = 500): string | null {
   return trimmed || null;
 }
 
-async function autorizado() {
-  const store = await cookies();
-  return verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value);
-}
-
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ ok: false, message }, {
     status,
@@ -34,8 +28,9 @@ function jsonError(message: string, status = 400) {
   });
 }
 
-export async function GET() {
-  if (!(await autorizado())) return jsonError("Inicia sesión para consultar clientes.", 401);
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "clients.view");
+  if (denied) return denied;
 
   try {
     const { data, error } = await supabaseAdmin
@@ -57,7 +52,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await autorizado())) return jsonError("Inicia sesión para registrar clientes.", 401);
+  const denied = await requireNeoPermission(request, "clients.create");
+  if (denied) return denied;
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return jsonError("Origen de solicitud no permitido.", 403);
 
@@ -107,7 +103,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!(await autorizado())) return jsonError("Inicia sesión para editar clientes.", 401);
+  const denied = await requireNeoPermission(request, "clients.edit");
+  if (denied) return denied;
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return jsonError("Origen de solicitud no permitido.", 403);
 

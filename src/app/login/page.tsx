@@ -110,7 +110,7 @@ export default function LoginPage() {
                   htmlFor="username"
                   className="mb-2 block text-sm font-medium text-slate-700"
                 >
-                  Usuario
+                  Usuario o correo electrónico
                 </label>
 
                 <input
@@ -121,7 +121,7 @@ export default function LoginPage() {
                   required
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Tu usuario"
+                  placeholder="Tu usuario o correo corporativo"
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"
                 />
               </div>

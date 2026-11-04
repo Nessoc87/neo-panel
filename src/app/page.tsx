@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
+import { getNeoPrincipal } from "@/lib/neo-auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const instant = false;
@@ -75,8 +74,15 @@ function EmptyState({ title, description }: { title: string; description: string
 }
 
 export default async function Home() {
-  const store = await cookies();
-  if (!verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value)) redirect("/login");
+  const principal = await getNeoPrincipal();
+  if (!principal) redirect("/login");
+  if (!principal.isOwner && !principal.permissions.includes("dashboard.view")) redirect("/");
+  const canQuotes = principal.isOwner || principal.permissions.includes("quotes.view");
+  const canServices = principal.isOwner || principal.permissions.includes("services.view");
+  const canShipments = principal.isOwner || principal.permissions.includes("shipments.view");
+  const canClients = principal.isOwner || principal.permissions.includes("clients.view");
+  const canCreateQuotes = principal.isOwner || principal.permissions.includes("quotes.create");
+  const canCreateServices = principal.isOwner || principal.permissions.includes("services.create");
 
   const [
     quotesTotalResult, quotesQuotedResult, quotesAttentionResult, clientsResult,
@@ -101,24 +107,24 @@ export default async function Home() {
   const recentQuotes = (recentQuotesResult.data ?? []) as QuoteRow[];
   const recentServices = (recentServicesResult.data ?? []) as ServiceRow[];
 
-  const quotesTotal = quotesTotalResult.error ? null : quotesTotalResult.count ?? 0;
-  const quotesQuoted = quotesQuotedResult.error ? null : quotesQuotedResult.count ?? 0;
-  const quotesAttention = quotesAttentionResult.error ? null : quotesAttentionResult.count ?? 0;
-  const activeClients = clientsResult.error ? null : clientsResult.count ?? 0;
-  const pendingServiceCount = pendingServicesResult.error ? null : pendingServicesResult.count ?? pendingServices.length;
-  const activeShipmentCount = activeShipmentCountResult.error ? null : activeShipmentCountResult.count ?? 0;
-  const deliveredShipmentCount = deliveredShipmentsResult.error ? null : deliveredShipmentsResult.count ?? 0;
-  const incidentsCount = incidentsCountResult.error ? null : incidentsCountResult.count ?? 0;
-  const pendingBillingTotal = pendingServices.reduce((sum, service) => sum + Number(service.total ?? 0), 0);
+  const quotesTotal = !canQuotes || quotesTotalResult.error ? null : quotesTotalResult.count ?? 0;
+  const quotesQuoted = !canQuotes || quotesQuotedResult.error ? null : quotesQuotedResult.count ?? 0;
+  const quotesAttention = !canQuotes || quotesAttentionResult.error ? null : quotesAttentionResult.count ?? 0;
+  const activeClients = !canClients || clientsResult.error ? null : clientsResult.count ?? 0;
+  const pendingServiceCount = !canServices || pendingServicesResult.error ? null : pendingServicesResult.count ?? pendingServices.length;
+  const activeShipmentCount = !canShipments || activeShipmentCountResult.error ? null : activeShipmentCountResult.count ?? 0;
+  const deliveredShipmentCount = !canShipments || deliveredShipmentsResult.error ? null : deliveredShipmentsResult.count ?? 0;
+  const incidentsCount = !canShipments || incidentsCountResult.error ? null : incidentsCountResult.count ?? 0;
+  const pendingBillingTotal = canServices ? pendingServices.reduce((sum, service) => sum + Number(service.total ?? 0), 0) : 0;
 
   const movements: Movement[] = [
-    ...recentQuotes.map((quote) => ({
+    ...(canQuotes ? recentQuotes : []).map((quote) => ({
       id: "quote-" + quote.id, type: "Cotización" as const,
       title: quote.cliente || "Cliente sin nombre", detail: quote.servicio || "Solicitud comercial",
       status: quote.estado, date: quote.created_at,
       amount: quote.monto_estimado === null ? null : Number(quote.monto_estimado), href: "/cotizaciones",
     })),
-    ...recentServices.map((service) => ({
+    ...(canServices ? recentServices : []).map((service) => ({
       id: "service-" + service.id, type: "Servicio" as const,
       title: service.cliente || "Cliente sin nombre", detail: service.concepto || "Servicio registrado",
       status: service.estatus, date: service.created_at,
@@ -137,8 +143,8 @@ export default async function Home() {
             <span className="neo-dashboard-today">{dayLabel()}</span>
           </div>
           <div className="neo-dashboard-quick-actions">
-            <Link href="/cotizaciones" className="neo-dashboard-action-primary"><span className="neo-action-symbol">＋</span>Nueva cotización</Link>
-            <Link href="/servicios" className="neo-dashboard-action-secondary"><span className="neo-action-symbol">＋</span>Registrar servicio</Link>
+            {canCreateQuotes && <Link href="/cotizaciones" className="neo-dashboard-action-primary"><span className="neo-action-symbol">＋</span>Nueva cotización</Link>}
+            {canCreateServices && <Link href="/servicios" className="neo-dashboard-action-secondary"><span className="neo-action-symbol">＋</span>Registrar servicio</Link>}
           </div>
         </section>
 

@@ -1,24 +1,10 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
-export async function GET() {
-  // 1. Comprobar que el usuario haya iniciado sesión.
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "conversations.view");
+  if (denied) return denied;
 
-  if (!verifySessionToken(token)) {
-    return NextResponse.json(
-      { error: "Debes iniciar sesión para consultar las conversaciones." },
-      {
-        status: 401,
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
 
   // 2. Leer las variables privadas del servidor.
   const url = process.env.NEO_BANDEJA_URL;

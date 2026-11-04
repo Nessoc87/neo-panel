@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 const ESTADOS = ["PROGRAMADO","ASIGNADO","EN_RUTA","ENTREGADO","INCIDENCIA","CANCELADO"];
 type Input = {
@@ -20,16 +19,13 @@ function fecha(v: unknown): string | null | undefined {
   const d = new Date(v + "T00:00:00.000Z");
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0,10) !== v ? undefined : v;
 }
-async function autorizado() {
-  const store = await cookies();
-  return verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value);
-}
 function error(message: string, status = 400) {
   return NextResponse.json({ ok: false, message }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function GET() {
-  if (!(await autorizado())) return error("Inicia sesión para consultar los envíos.", 401);
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "shipments.view");
+  if (denied) return denied;
   try {
     const { data: servicios, error: serviciosError } = await supabaseAdmin
       .from("servicios")
@@ -68,7 +64,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await autorizado())) return error("Inicia sesión para actualizar envíos.", 401);
+  const denied = await requireNeoPermission(request, "shipments.update");
+  if (denied) return denied;
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return error("Origen de solicitud no permitido.", 403);
   let body: Input;

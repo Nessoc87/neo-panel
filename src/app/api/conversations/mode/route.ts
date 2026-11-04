@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 export async function POST(request: NextRequest) {
-  // 1. Verificar que el usuario haya iniciado sesión.
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const denied = await requireNeoPermission(request, "conversations.manage");
+  if (denied) return denied;
 
-  if (!verifySessionToken(token)) {
-    return NextResponse.json(
-      { ok: false, message: "Tu sesión ha expirado. Inicia sesión nuevamente." },
-      {
-        status: 401,
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
 
   // 2. Leer y validar los datos recibidos.
   let body: unknown;

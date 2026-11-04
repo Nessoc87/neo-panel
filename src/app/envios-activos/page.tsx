@@ -1,12 +1,14 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
+import { getNeoPrincipal } from "@/lib/neo-auth";
 import EnviosClient from "./EnviosClient";
 
 export const instant = false;
 
+export const dynamic = "force-dynamic";
+
 export default async function EnviosPage() {
-  const store = await cookies();
-  if (!verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value)) redirect("/login");
+  const principal = await getNeoPrincipal();
+  if (!principal) redirect("/login");
+  if (!principal.isOwner && !principal.permissions.includes("shipments.view")) redirect("/");
   return <EnviosClient />;
 }

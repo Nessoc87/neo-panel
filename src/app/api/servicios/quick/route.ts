@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 type EstatusServicio = "PENDIENTE" | "FACTURADO" | "PAGADO" | "CANCELADO";
 
@@ -24,19 +20,9 @@ function optionalDate(value: unknown): string | null | undefined {
   return value;
 }
 
-async function requireSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  return verifySessionToken(token);
-}
-
 export async function PATCH(request: NextRequest) {
-  if (!(await requireSession())) {
-    return NextResponse.json(
-      { ok: false, message: "Inicia sesión para editar servicios." },
-      { status: 401, headers: { "Cache-Control": "no-store" } }
-    );
-  }
+  const denied = await requireNeoPermission(request, "services.edit");
+  if (denied) return denied;
 
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {

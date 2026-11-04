@@ -1,28 +1,12 @@
 
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
-export async function GET() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "catalogs.view");
+  if (denied) return denied;
 
-  if (!verifySessionToken(token)) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Inicia sesión para consultar los catálogos.",
-      },
-      {
-        status: 401,
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
 
   try {
     const [clientesResult, conceptosResult] = await Promise.all([

@@ -1,12 +1,14 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
+import { getNeoPrincipal } from "@/lib/neo-auth";
 import ClientesClient from "./ClientesClient";
 
 export const instant = false;
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientesPage() {
-  const store = await cookies();
-  if (!verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value)) redirect("/login");
+  const principal = await getNeoPrincipal();
+  if (!principal) redirect("/login");
+  if (!principal.isOwner && !principal.permissions.includes("clients.view")) redirect("/");
   return <ClientesClient />;
 }

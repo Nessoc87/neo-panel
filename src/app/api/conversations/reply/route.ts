@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 type ApiResult = {
   ok?: boolean;
@@ -12,19 +8,9 @@ type ApiResult = {
 };
 
 export async function POST(request: NextRequest) {
-  // 1. Verificar la sesión privada de Neo Panel.
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const denied = await requireNeoPermission(request, "conversations.reply");
+  if (denied) return denied;
 
-  if (!verifySessionToken(token)) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Tu sesión ha expirado. Inicia sesión nuevamente.",
-      },
-      { status: 401 }
-    );
-  }
 
   // 2. Comprobar que la petición venga del mismo sitio.
   const origin = request.headers.get("origin");

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 type Input = {
   id?: unknown; cliente_id?: unknown; cliente?: unknown; contacto?: unknown; telefono?: unknown;
@@ -95,16 +94,13 @@ function normalizarPartidas(raw: unknown): ResumenPartidas | null | undefined {
   const retencion = moneda(partidas.reduce((sum, item) => sum + item.retencion, 0));
   return { partidas, subtotal, iva, retencion, total: moneda(subtotal + iva - retencion) };
 }
-async function autorizado() {
-  const store = await cookies();
-  return verifySessionToken(store.get(SESSION_COOKIE_NAME)?.value);
-}
 function error(message: string, status = 400) {
   return NextResponse.json({ ok: false, message }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function GET() {
-  if (!(await autorizado())) return error("Inicia sesión para consultar cotizaciones.", 401);
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "quotes.view");
+  if (denied) return denied;
   try {
     const { data, error: dbError } = await supabaseAdmin
       .from("neo_cotizaciones").select("*").order("created_at", { ascending: false }).limit(1000);
@@ -119,7 +115,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await autorizado())) return error("Inicia sesión para registrar cotizaciones.", 401);
+  const denied = await requireNeoPermission(request, "quotes.create");
+  if (denied) return denied;
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return error("Origen de solicitud no permitido.", 403);
   let body: Input;
@@ -170,7 +167,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!(await autorizado())) return error("Inicia sesión para editar cotizaciones.", 401);
+  const denied = await requireNeoPermission(request, "quotes.edit");
+  if (denied) return denied;
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return error("Origen de solicitud no permitido.", 403);
   let body: Input;
@@ -231,7 +229,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!(await autorizado())) return error("Inicia sesión para eliminar cotizaciones.", 401);
+  const denied = await requireNeoPermission(request, "quotes.delete");
+  if (denied) return denied;
 
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) return error("Origen de solicitud no permitido.", 403);

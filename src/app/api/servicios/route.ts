@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import {
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireNeoPermission } from "@/lib/neo-auth";
 
 type ServiceInput = {
   cliente?: unknown;
@@ -160,20 +156,9 @@ function normalizarConceptos(raw: unknown, legacy: {
   };
 }
 
-async function requireSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  return verifySessionToken(token);
-}
-
-export async function GET() {
-  if (!(await requireSession())) {
-    return NextResponse.json(
-      { ok: false, message: "Inicia sesión para consultar los servicios." },
-      { status: 401, headers: { "Cache-Control": "no-store" } }
-    );
-  }
+export async function GET(request: NextRequest) {
+  const denied = await requireNeoPermission(request, "services.view");
+  if (denied) return denied;
 
   try {
     const { data, error } = await supabaseAdmin
@@ -204,12 +189,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await requireSession())) {
-    return NextResponse.json(
-      { ok: false, message: "Inicia sesión para registrar servicios." },
-      { status: 401, headers: { "Cache-Control": "no-store" } }
-    );
-  }
+  const denied = await requireNeoPermission(request, "services.create");
+  if (denied) return denied;
 
   const origin = request.headers.get("origin");
 
@@ -343,18 +324,8 @@ export async function POST(request: NextRequest) {
   }
 }
 export async function PATCH(request: NextRequest) {
-  if (!(await requireSession())) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Inicia sesión para editar servicios.",
-      },
-      {
-        status: 401,
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
+  const denied = await requireNeoPermission(request, "services.edit");
+  if (denied) return denied;
 
   const origin = request.headers.get("origin");
 
