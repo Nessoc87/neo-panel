@@ -39,24 +39,56 @@ async function readPrincipal(ownerToken?: string, employeeToken?: string): Promi
   if (!employeeToken || employeeToken.length < 32) return null;
 
   try {
-    const { data, error } = await supabaseAdmin.rpc("neo_get_auth_context", {
-      p_token_hash: hashToken(employeeToken),
-    });
-    if (error || !data || typeof data !== "object") return null;
+    const tokenHash = hashToken(employeeToken);
 
-    const row = data as Record<string, unknown>;
-    if (row.active !== true || row.invitation_pending === true) return null;
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from("neo_user_sessions")
+      .select("user_id")
+      .eq("token_hash", tokenHash)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (sessionError || !session?.user_id) return null;
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("neo_usuarios")
+      .select("auth_user_id, email, full_name, role_id, active, invitation_pending, custom_permissions_enabled, role:neo_roles(name)")
+      .eq("auth_user_id", session.user_id)
+      .maybeSingle();
+
+    if (
+      profileError ||
+      !profile ||
+      profile.active !== true ||
+      profile.invitation_pending === true
+    ) {
+      return null;
+    }
+
+    const permissionQuery = profile.custom_permissions_enabled
+      ? supabaseAdmin
+          .from("neo_user_permissions")
+          .select("permission_key")
+          .eq("user_id", profile.auth_user_id)
+      : supabaseAdmin
+          .from("neo_role_permissions")
+          .select("permission_key")
+          .eq("role_id", profile.role_id);
+
+    const { data: permissionRows, error: permissionsError } = await permissionQuery;
+    if (permissionsError) return null;
+
+    const roleValue = profile.role as { name?: string } | { name?: string }[] | null;
+    const role = Array.isArray(roleValue) ? roleValue[0]?.name : roleValue?.name;
 
     return {
-      id: typeof row.id === "string" ? row.id : null,
-      email: typeof row.email === "string" ? row.email : "",
-      fullName: typeof row.full_name === "string" ? row.full_name : "Empleado",
-      role: typeof row.role === "string" ? row.role : "Empleado",
-      roleId: typeof row.role_id === "string" ? row.role_id : null,
+      id: profile.auth_user_id,
+      email: profile.email,
+      fullName: profile.full_name,
+      role: typeof role === "string" ? role : "Empleado",
+      roleId: profile.role_id,
       isOwner: false,
-      permissions: Array.isArray(row.permissions)
-        ? row.permissions.filter((value): value is string => typeof value === "string")
-        : [],
+      permissions: (permissionRows ?? []).map((row) => row.permission_key),
     };
   } catch (error) {
     console.error("No se pudo consultar la sesión de Neo:", error);
