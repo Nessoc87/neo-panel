@@ -14,6 +14,7 @@ const navigation: { href: string; label: string; description: string; icon: Icon
   { href: "/conversaciones", label: "Conversaciones", description: "Atención por WhatsApp", icon: "messages", permission: "conversations.view" },
   { href: "/clientes", label: "Clientes", description: "Directorio comercial", icon: "clients", permission: "clients.view" },
   { href: "/servicios", label: "Servicios", description: "Registro y facturación", icon: "services", permission: "services.view" },
+  { href: "/servicios/pendientes", label: "Servicios pendientes", description: "Control de facturación", icon: "services", permission: "services.view" },
   { href: "/usuarios", label: "Usuarios y permisos", description: "Accesos del personal", icon: "users", permission: "users.manage", ownerOnly: true },
 ];
 
@@ -48,6 +49,11 @@ const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: strin
     title: "Servicios",
     subtitle: "Administra conceptos, importes, facturas y estados de servicio.",
     eyebrow: "ADMINISTRACIÓN",
+  },
+  "/servicios/pendientes": {
+    title: "Servicios pendientes",
+    subtitle: "Controla los pendientes, facturados, pagados y cancelados.",
+    eyebrow: "CONTROL ADMINISTRATIVO",
   },
 };
 
@@ -141,7 +147,7 @@ function NeoWorkspaceContent({ children }: { children: ReactNode }) {
         <div className="neo-sidebar-label">ESPACIO DE TRABAJO</div>
         <nav className="neo-nav">
           {visibleNavigation.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = item.href === "/" ? pathname === "/" : pathname === item.href || (item.href !== "/servicios" && pathname.startsWith(item.href + "/"));
             return (
               <Link
                 key={item.href}

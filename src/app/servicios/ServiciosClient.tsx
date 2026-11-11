@@ -272,7 +272,7 @@ function descripcionPartidas(servicio: Servicio): string {
   }).join("\n");
 }
 
-export default function ServiciosPage() {
+export default function ServiciosPage({ vista = "registro" }: { vista?: "registro" | "pendientes" }) {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [clientes, setClientes] = useState<ClienteCatalogo[]>([]);
   const [conceptos, setConceptos] = useState<ConceptoCatalogo[]>([]);
@@ -776,6 +776,15 @@ export default function ServiciosPage() {
           <nav className="flex flex-wrap gap-2">
             <a href="/" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Panel principal</a>
             <a href="/conversaciones" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Conversaciones</a>
+            {vista === "registro" ? (
+              <a href="/servicios/pendientes" className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                Servicios pendientes ({resumen.pendientes})
+              </a>
+            ) : (
+              <a href="/servicios" className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">
+                Registrar servicio
+              </a>
+            )}
             <form action="/api/auth/logout" method="POST">
               <button type="submit" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cerrar sesión</button>
             </form>
@@ -786,12 +795,15 @@ export default function ServiciosPage() {
       <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
         <section className="rounded-3xl bg-gradient-to-r from-slate-900 to-cyan-800 p-6 text-white sm:p-8">
           <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">ADMINISTRACIÓN</p>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Servicios</h1>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">{vista === "registro" ? "Servicios" : "Servicios pendientes"}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
-            Registra un servicio con uno o varios conceptos. Cada partida conserva su propia cantidad, precio, IVA y retención; la app suma los importes automáticamente.
+            {vista === "registro"
+              ? "Registra servicios con sus conceptos, cantidades e impuestos. El control de pendientes y facturación está en una pantalla independiente."
+              : "Consulta y administra los servicios pendientes, facturados, pagados y cancelados sin mezclar esta lista con el registro de nuevos servicios."}
           </p>
         </section>
 
+        {vista === "registro" && (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { titulo: "Servicios registrados", valor: String(resumen.cantidad), clase: "text-slate-900" },
@@ -806,11 +818,27 @@ export default function ServiciosPage() {
             </article>
           ))}
         </section>
+        )}
+
+        {vista === "registro" && (
+          <section className="flex flex-col gap-4 rounded-2xl border border-teal-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-teal-700">Control administrativo</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-900">Servicios pendientes y facturación</h2>
+              <p className="mt-1 text-sm text-slate-600">Tienes <strong className="text-amber-700">{resumen.pendientes}</strong> servicio(s) pendiente(s). Abre la lista para actualizar estatus, capturar facturas, registrar pagos o exportar a Excel.</p>
+            </div>
+            <a href="/servicios/pendientes" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-teal-800">
+              Abrir servicios pendientes
+              <span aria-hidden="true" className="ml-2">→</span>
+            </a>
+          </section>
+        )}
 
         {errorCatalogos && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><p className="font-semibold">No se pudieron cargar los catálogos</p><p className="mt-1">{errorCatalogos}</p><button type="button" onClick={() => void cargarCatalogos()} className="mt-3 rounded-lg border border-rose-300 px-3 py-2 font-semibold hover:bg-rose-100">Reintentar</button></div>}
         {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><p className="font-semibold">No se pudo completar la operación</p><p className="mt-1">{error}</p></div>}
         {mensaje && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{mensaje}</div>}
 
+        {(vista === "registro" || Boolean(editandoId)) && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -939,9 +967,12 @@ export default function ServiciosPage() {
           </form>
         </section>
 
+        )}
+
+        {vista === "pendientes" && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div><h2 className="text-xl font-bold">Servicios {textoEstatus(filtroEstatus).toLowerCase()}</h2><p className="mt-1 text-sm text-slate-500">Cada estatus tiene su propia lista. Los cinco registros más recientes aparecen primero en la vista.</p></div>
+            <div><h2 className="text-xl font-bold">Control de servicios · {textoEstatus(filtroEstatus).toLowerCase()}</h2><p className="mt-1 text-sm text-slate-500">Cada estatus tiene su propia lista. Los cinco registros más recientes aparecen primero en la vista.</p></div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => void cargarServicios()} disabled={cargando} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-60">{cargando ? "Actualizando..." : "Actualizar"}</button>
               <button type="button" onClick={exportarExcel} disabled={filtrados.length === 0} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-50">Exportar Excel</button>
@@ -1051,7 +1082,7 @@ export default function ServiciosPage() {
             </div>
           )}
           <p className="mt-3 text-xs leading-5 text-slate-500">En pantallas pequeñas puedes deslizar la tabla horizontalmente. Exportar Excel descarga todos los registros que coinciden con la búsqueda en la lista seleccionada, no solo los que se muestran en pantalla.</p>
-        </section>
+        </section>        )}
 
         {edicionRapida && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 sm:p-6">

@@ -8,5 +8,5 @@ export default async function ServiciosPage() {
   const principal = await getNeoPrincipal();
   if (!principal) redirect("/login");
   if (!principal.isOwner && !principal.permissions.includes("services.view")) redirect(getNeoHomePath(principal));
-  return <ServiciosClient />;
+  return <ServiciosClient vista="registro" />;
 }
