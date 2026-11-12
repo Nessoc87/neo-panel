@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 
 type Estatus = "PENDIENTE" | "FACTURADO" | "PAGADO" | "CANCELADO";
 
@@ -747,19 +747,28 @@ export default function ServiciosPage({ vista = "registro" }: { vista?: "registr
 
     const hoja = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
     hoja["!cols"] = [
-      { wch: 23 },
-      { wch: 12 },
-      { wch: 42 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 16 },
+      { wch: 27 },
+      { wch: 13 },
+      { wch: 44 },
+      { wch: 17 },
+      { wch: 17 },
+      { wch: 17 },
+      { wch: 17 },
+      { wch: 17 },
       { wch: 48 },
       { wch: 48 },
     ];
+    hoja["!rows"] = [
+      { hpt: 28 },
+      ...filas.map(() => ({ hpt: 22 })),
+    ];
 
-    // Add filter dropdowns to the header row, matching the reference Excel layout.
+    // Accounting format: currency symbol on the left, amount aligned by decimals,
+    // negatives in parentheses and zero values as a dash.
+    const formatoContabilidad =
+      '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)';
+
+    // Add filter dropdowns to all exported rows.
     hoja["!autofilter"] = {
       ref: XLSX.utils.encode_range({
         s: { r: 0, c: 0 },
@@ -767,14 +776,40 @@ export default function ServiciosPage({ vista = "registro" }: { vista?: "registr
       }),
     };
 
-    // Keep quantities and amounts numeric so Excel can calculate and filter them.
-    for (let fila = 2; fila <= filas.length + 1; fila += 1) {
-      for (const columna of ["D", "E", "F", "G", "H"]) {
-        const celda = hoja[`${columna}${fila}`];
-        if (celda) celda.z = '"$"#,##0.00';
+    // Center all columns, vertically align cells and style the header.
+    // Quantity is a numeric integer (not text), so Excel displays 1, 2, 3, etc.
+    // Money columns use Excel Accounting format rather than a plain currency format.
+    for (let row = 0; row <= filas.length; row += 1) {
+      for (let column = 0; column < encabezados.length; column += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: column });
+        const celda = hoja[address];
+        if (!celda) continue;
+
+        celda.s = {
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: row === 0 || column >= 8,
+          },
+          ...(row === 0
+            ? {
+                font: { bold: true, color: { rgb: "FFFFFF" } },
+                fill: { patternType: "solid", fgColor: { rgb: "17324D" } },
+                border: {
+                  bottom: { style: "medium", color: { rgb: "0F253A" } },
+                },
+              }
+            : {}),
+        };
+
+        if (row > 0 && column === 1) {
+          celda.z = "0";
+        }
+
+        if (row > 0 && column >= 3 && column <= 7) {
+          celda.z = formatoContabilidad;
+        }
       }
-      const cantidadCell = hoja[`B${fila}`];
-      if (cantidadCell) cantidadCell.z = "0.##";
     }
 
     const libro = XLSX.utils.book_new();
