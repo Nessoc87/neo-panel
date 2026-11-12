@@ -691,16 +691,16 @@ export default function ServiciosPage({ vista = "registro" }: { vista?: "registr
 
   function exportarExcel() {
     const encabezados = [
-      "FECHA DE SERVICIO",
-      "NUMERO INTERNO O FACTURA",
+      "FACTURA / ORDEN INTERNO",
       "CANTIDAD",
       "CONCEPTO",
-      "C/U ($)",
-      "SUBTOTAL ($)",
-      "IVA ($)",
-      "RETENCION ($)",
-      "TOTAL ($)",
+      "C/U",
+      "SUBTOTAL",
+      "IVA",
+      "RETENCION",
+      "TOTAL",
       "OBSERVACIONES",
+      "COMENTARIOS",
     ];
 
     const filas = filtrados.flatMap((servicio) => {
@@ -731,7 +731,6 @@ export default function ServiciosPage({ vista = "registro" }: { vista?: "registr
           : redondearDinero(subtotal + iva - retencion);
 
         return [
-          fechaMostrar(servicio.fecha_entrega),
           identificador,
           cantidad,
           descripcionCompleta(nombreLinea(linea), separarSubconceptos(linea.subconceptos)),
@@ -741,23 +740,40 @@ export default function ServiciosPage({ vista = "registro" }: { vista?: "registr
           retencion,
           total,
           servicio.observaciones ?? "",
+          servicio.comentarios ?? "",
         ];
       });
     });
 
     const hoja = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
     hoja["!cols"] = [
-      { wch: 18 }, { wch: 24 }, { wch: 12 }, { wch: 65 }, { wch: 16 },
-      { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 45 },
+      { wch: 23 },
+      { wch: 12 },
+      { wch: 42 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 48 },
+      { wch: 48 },
     ];
 
-    // Keep amounts numeric for Excel calculations and display them as MXN.
+    // Add filter dropdowns to the header row, matching the reference Excel layout.
+    hoja["!autofilter"] = {
+      ref: XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: filas.length, c: encabezados.length - 1 },
+      }),
+    };
+
+    // Keep quantities and amounts numeric so Excel can calculate and filter them.
     for (let fila = 2; fila <= filas.length + 1; fila += 1) {
-      for (const columna of ["E", "F", "G", "H", "I"]) {
+      for (const columna of ["D", "E", "F", "G", "H"]) {
         const celda = hoja[`${columna}${fila}`];
         if (celda) celda.z = '"$"#,##0.00';
       }
-      const cantidadCell = hoja[`C${fila}`];
+      const cantidadCell = hoja[`B${fila}`];
       if (cantidadCell) cantidadCell.z = "0.##";
     }
 
